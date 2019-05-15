@@ -71,7 +71,7 @@ create smooth gifs of rotating molecules
 
 ### Switch rotation direction and adjust bond widths
 
-    # counterclockwise (ccw) or clockwise
+    # counterclockwise (ccw)[Default] or clockwise (cw)
     # based on top-down perspective
     direction = 'cw'
 
