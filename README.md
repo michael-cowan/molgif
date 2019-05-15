@@ -4,7 +4,7 @@ create smooth gifs of rotating molecules
 
 ![C60](gifs/C60.gif)
 
-## Requirements
+**Requirements**
 
 - ase
 - matplotlib
