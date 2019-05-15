@@ -29,7 +29,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     KArgs:
         - loop_time (int): number of seconds for atoms to complete one rotation
-                           (Default: 10)
+                           (Default: 8)
         - fps (int): frames per second in animation
                      (Default: 20)
         - scale (float): scales size of atoms: scale * ase.data.covalent_radii

@@ -18,7 +18,6 @@ create smooth gifs of rotating molecules
     save_path = 'biphenyl.gif'
 
     # create rotating gif with rot_gif function
-    # auto_rotate: rotates molecule for better view
     molgif.rot_gif(molecule, save_path, auto_rotate=True)
 
 ![biphenyl](gifs/biphenyl.gif)
@@ -26,14 +25,15 @@ create smooth gifs of rotating molecules
 ### Adjust loop time and FPS
 
     # time to complete one rotation (seconds)
-    loop_time = 4
+    loop_time = 2
 
+    # frames per second
     fps = 60
 
     molgif.rot_gif(molecule, save_path, auto_rotate=True,
                    loop_time=loop_time, fps=fps)
 
-![biphenyl-4s-looptime](gifs/biphenyl-4s-looptime.gif)
+![biphenyl-2s-looptime](gifs/biphenyl-2s-looptime.gif)
 
 ### Turn off bonds and scale atomic sizes
 
