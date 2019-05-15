@@ -56,6 +56,20 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-charges](gifs/biphenyl-charges.gif)
 
+### Specify color of each atom
+
+    # can be a string for one color
+    # or a list of custom colors
+    rainbow = ['red', 'orange', 'yellow',
+               'green', 'blue', 'violet']
+    rainbow = rainbow * 4
+    rainbow = rainbow[:len(molecule)]
+
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   colors=rainbow)
+
+![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
+
 ## Requirements
 
 - ase
