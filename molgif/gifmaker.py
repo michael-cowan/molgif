@@ -19,7 +19,7 @@ if anim.rcParams['animation.convert_path'].endswith(('convert',
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             auto_rotate=False, recenter=True, labels=None, colors=None,
             center_data=True, colorbar=False, cmap=cm.bwr_r,
-            use_charges=False, max_px=600, bond_width=0.25):
+            use_charges=False, max_px=600, bond_width=0.25, rotation='ccw'):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -68,6 +68,10 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                         (Default: 600)
         - bond_width (float): width of bonds to be drawn (in Angstroms)
                               (Default: 0.2 Angstrom)
+        - rotation (str): direction for molecule to rotate
+                          (top-down perspective)
+                          - 'ccw': counterclockwise [left-to-right] (Default)
+                          - 'cw': clockwise [right-to-left]
     """
     # if save_path is not a gif, give it a gif extension
     if not save_path.lower().endswith('.gif'):
@@ -78,6 +82,12 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # rotation angles for atoms object
     rot = 360 / frames
+
+    # negate rotation angle if clockwise is specified
+    if rotation == 'cw':
+        rot *= -1
+    elif rotation != 'ccw':
+        print('Incorrect rotation specified - using counterclockwise (ccw)')
 
     # number of digits in max frames
     ndig = len(str(frames + 1))
