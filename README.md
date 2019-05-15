@@ -58,11 +58,10 @@ create smooth gifs of rotating molecules
 
 ### Specify color of each atom
 
-    # can be a string for one color
-    # or a list of custom colors
-    rainbow = ['red', 'orange', 'yellow',
-               'green', 'blue', 'violet']
-    rainbow = rainbow * 4
+    # can be a string for one color or a list of custom colors
+    rainbow = ['red', 'orange', 'yellow', 'green', 'blue', 'violet'] * 4
+
+    # list much match number of atoms
     rainbow = rainbow[:len(molecule)]
 
     molgif.rot_gif(molecule, save_path, auto_rotate=True,
