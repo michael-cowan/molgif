@@ -4,6 +4,12 @@ create smooth gifs of rotating molecules
 
 ![C60](gifs/C60.gif)
 
+## Requirements
+
+- ase
+- matplotlib
+- ImageMagick (command line tools must be installed)
+
 ## Examples
 
 ### Automatically rotate molecule for better view
@@ -55,9 +61,3 @@ create smooth gifs of rotating molecules
                    use_charges=True)
 
 ![biphenyl-charges](gifs/biphenyl-charges.gif)
-
-## Requirements
-
-- ase
-- matplotlib
-- ImageMagick (command line tools must be installed)
