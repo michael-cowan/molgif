@@ -69,6 +69,20 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
 
+### Switch rotation direction and adjust bond widths
+
+    # counterclockwise (ccw) or clockwise
+    # based on top-down perspective
+    direction = 'cw'
+
+    # specify bond width in Angstrom
+    bond_width = 0.4
+
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   direction=direction, bond_width=bond_width)
+
+![biphenyl-cw](gifs/biphenyl-cw.gif)
+
 ## Requirements
 
 - ase
