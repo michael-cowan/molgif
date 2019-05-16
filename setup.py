@@ -3,7 +3,7 @@ import setuptools
 with open('molgif/_version.py', 'r') as fid:
     exec(fid.read())
 
-with open('README.md', 'r', encoding='utf-8') as readme:
+with open('README.md', 'r') as readme:
     # ignore gifs
     description = ''.join([i for i in readme.readlines()
                            if not i.startswith('![')])
