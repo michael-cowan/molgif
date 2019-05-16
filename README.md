@@ -42,6 +42,33 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-no-bonds](gifs/biphenyl-no-bonds.gif)
 
+### Switch rotation axis
+
+    # switch between x, y (Default), or z
+    rot_axis='z'
+
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   rot_axis=rot_axiz)
+
+![biphenyl-rotz](gifs/biphenyl-rotz.gif)
+
+### Switch rotation direction and adjust bond widths
+
+    # counterclockwise (ccw)[Default] or clockwise (cw)
+    # based on rot_axis
+    # 'x': view from left
+    # 'y': view from top
+    # 'z': view into screen
+    direction = 'cw'
+
+    # specify bond width in Angstrom
+    bond_width = 0.4
+
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   direction=direction, bond_width=bond_width)
+
+![biphenyl-cw](gifs/biphenyl-cw.gif)
+
 ### Visualize charges and include a colorbar
 
     import random
@@ -68,20 +95,6 @@ create smooth gifs of rotating molecules
                    colors=rainbow)
 
 ![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
-
-### Switch rotation direction and adjust bond widths
-
-    # counterclockwise (ccw)[Default] or clockwise (cw)
-    # based on top-down perspective
-    direction = 'cw'
-
-    # specify bond width in Angstrom
-    bond_width = 0.4
-
-    molgif.rot_gif(molecule, save_path, auto_rotate=True,
-                   direction=direction, bond_width=bond_width)
-
-![biphenyl-cw](gifs/biphenyl-cw.gif)
 
 ## Requirements
 
