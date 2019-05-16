@@ -125,16 +125,50 @@ def draw_bonds(atoms, ax, radii, bond_info):
         ax.plot(x, y, zorder=zorder, color='white', lw=bond_fill)
 
 
-def get_fig_bounds(atoms, offset=2):
+def get_fig_bounds(atoms, rot_axis='y', offset=2):
     # max x and y dists for molecule
-    distx = np.linalg.norm(atoms.positions[:, 0:3:2], axis=1).max()
-    maxdisty = atoms.positions[:, 1].max()
-    mindisty = atoms.positions[:, 1].min()
+    # start by adding in offset
+    minx = -offset
+    maxx = offset
+    miny = -offset
+    maxy = offset
+
+    if 'x' in rot_axis:
+        # account for z coord in y since atoms rotate about x
+        disty = np.linalg.norm(atoms.positions[:, 1:], axis=1).max()
+        miny -= disty
+        maxy += disty
+
+        # x coords will not change for atoms
+        minx += atoms.positions[:, 0].min()
+        maxx += atoms.positions[:, 0].max()
+
+    elif 'y' in rot_axis:
+        # account for z coord in x since atoms rotate about y
+        distx = np.linalg.norm(atoms.positions[:, 0:2:2], axis=1).max()
+        minx -= distx
+        maxx += distx
+
+        # y coords will not change for atoms
+        miny += atoms.positions[:, 1].min()
+        maxy += atoms.positions[:, 1].max()
+
+    elif 'z' in rot_axis:
+        # account for x and y coords since atoms rotate about z
+        distxy = np.linalg.norm(atoms.positions[:, 0:2], axis=1).max()
+        minx -= distxy
+        maxx += distxy
+
+        miny -= distxy
+        maxy += distxy
+
+    # calculate axis limits
+    xlim = (minx, maxx)
+    ylim = (miny, maxy)
 
     # calculate width and height based on max atomic positions
-    halfx = offset + distx
-    width = 2 * halfx
-    height = 2 * offset + maxdisty - mindisty
+    width = maxx - minx
+    height = maxy - miny
 
     # calculate figure size
     # make sure max side length is 5 inches
@@ -143,9 +177,6 @@ def get_fig_bounds(atoms, offset=2):
     else:
         fig_size = (5 * (width / height), 5)
 
-    # calculate axis limits
-    xlim = (-halfx, halfx)
-    ylim = (mindisty - offset, maxdisty + offset)
     return fig_size, xlim, ylim
 
 

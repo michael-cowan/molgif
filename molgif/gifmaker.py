@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import molgif.utils as utils
 import os
+import re
 import ase
 from ase.data import covalent_radii
 from ase.data.colors import jmol_colors
@@ -17,8 +18,8 @@ if anim.rcParams['animation.convert_path'].endswith(('convert',
 
 
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
-            auto_rotate=False, recenter=True, labels=None, colors=None,
-            center_data=True, colorbar=False, cmap=cm.bwr_r,
+            auto_rotate=False, recenter=True, rot_axis='y', labels=None,
+            colors=None, center_data=True, colorbar=False, cmap=cm.bwr_r,
             use_charges=False, max_px=600, bond_width=0.25, direction='ccw'):
     """
     Creates a rotating animation .gif of ase.Atoms object
@@ -42,6 +43,12 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         - recenter (bool): if True, atoms are centered to origin
                            based on avg. coord
                            (Default: True)
+        - rot_axis (str): specify axis to rotate about
+                          - x (left-to-right), y (bot-to-top)
+                          - can be: 'y' | 'x' | 'z',
+                          - can also be '-x' to invert rotation
+                            (same as changing direction)
+                          (Default: 'y')
         - labels (str | iterable): type or list of labels to add to atoms
                                    - 'symbol': uses chemical symbol
                                    - 'colors': uses values from colors KArg
@@ -69,9 +76,13 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         - bond_width (float): width of bonds to be drawn (in Angstroms)
                               (Default: 0.2 Angstrom)
         - direction (str): direction for molecule to rotate
-                           (top-down perspective)
-                           - 'ccw': counterclockwise [left-to-right] (Default)
+                           - rot_axis='y': (looking down from the top)
+                           - rot_axis='x': (looking from the right)
+                           - rot_axis='z': (looking into screen)
+                           OPTIONS:
+                           - 'ccw': counterclockwise [left-to-right]
                            - 'cw': clockwise [right-to-left]
+                           (Default: 'ccw')
     """
     # if save_path is not a gif, give it a gif extension
     if not save_path.lower().endswith('.gif'):
@@ -82,6 +93,11 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # rotation angles for atoms object
     rot = 360 / frames
+
+    # rot_axis must be x, -x, y, -y, z, or -z
+    rot_axis = rot_axis.lower()
+    if not re.match('-?[xyz]', rot_axis):
+        raise ValueError('Invalid rot_axis given')
 
     # negate rotation angle if clockwise is specified
     if direction == 'cw':
@@ -123,7 +139,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # calculate figure size
     # calculate axis limits (include offset as buffer)
-    fig_size, xlim, ylim = utils.get_fig_bounds(atoms)
+    fig_size, xlim, ylim = utils.get_fig_bounds(atoms, rot_axis=rot_axis)
 
     # don't allow colorbar unless values given
     block_colorbar = True
@@ -262,8 +278,9 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             print(' Wrapping things up..', end='\r')
         else:
             print(' Building frame: ' + dig_str % (i + 2), end='\r')
+
         # rotate atoms
-        atoms.rotate(rot, v='y')
+        atoms.rotate(rot, v=rot_axis)
 
         # move atoms (set_center) and change zorder (based on z coord)
         for i, a in enumerate(atoms):
