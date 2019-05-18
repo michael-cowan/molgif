@@ -22,6 +22,40 @@ create smooth gifs of rotating molecules
 
 ![biphenyl](gifs/biphenyl.gif)
 
+### Specify color of each atom
+
+    # can be a string for one color or a list of custom colors
+    rainbow = ['red', 'orange', 'yellow', 'green', 'blue', 'violet'] * 4
+
+    # list much match number of atoms
+    rainbow = rainbow[:len(molecule)]
+
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   colors=rainbow)
+
+![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
+
+### Use dictionary to quickly color by atom type
+
+    # default colors will be used for types not specified
+    molgif.rot_gif(molecule, save_path, auto_rotate=True,
+                   colors=dict(C='hotpink'), add_legend=True)
+
+![biphenyl-hotpink](gifs/biphenyl-hotpink.gif)
+
+### Anchor an atom to be at the center of rotation
+
+    # define index of atom to anchor
+    anchor = 3
+
+    colors = ['white'] * len(mol)
+    colors[anchor] = '#0892d0'
+
+    molgif.rot_gif(mol, path, auto_rotate=True,
+                   colors=colors, anchor=anchor)
+
+![biphenyl-anchor](gifs/biphenyl-anchor.gif)
+
 ### Add a legend
 
     molgif.rot_gif(molecule, save_path, autorotate=True,
@@ -82,19 +116,6 @@ create smooth gifs of rotating molecules
                    use_charges=True)
 
 ![biphenyl-charges](gifs/biphenyl-charges.gif)
-
-### Specify color of each atom
-
-    # can be a string for one color or a list of custom colors
-    rainbow = ['red', 'orange', 'yellow', 'green', 'blue', 'violet'] * 4
-
-    # list much match number of atoms
-    rainbow = rainbow[:len(molecule)]
-
-    molgif.rot_gif(molecule, save_path, auto_rotate=True,
-                   colors=rainbow)
-
-![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
 
 ## Requirements
 
