@@ -7,6 +7,7 @@ from ase.data import covalent_radii
 from ase.data.colors import jmol_colors
 import numpy as np
 import matplotlib
+from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.animation as anim
 import matplotlib.pyplot as plt
@@ -18,9 +19,10 @@ if anim.rcParams['animation.convert_path'].endswith(('convert',
 
 
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
-            auto_rotate=False, recenter=True, rot_axis='y', labels=None,
+            auto_rotate=False, recenter=True, rot_axis='y', add_legend=False,
             colors=None, center_data=True, colorbar=False, cmap=cm.bwr_r,
-            use_charges=False, max_px=600, bond_width=0.25, direction='ccw'):
+            use_charges=False, max_px=600, bond_width=0.25, direction='ccw',
+            labels=None):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -49,12 +51,8 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                           - can also be '-x' to invert rotation
                             (same as changing direction)
                           (Default: 'y')
-        - labels (str | iterable): type or list of labels to add to atoms
-                                   - 'symbol': uses chemical symbol
-                                   - 'colors': uses values from colors KArg
-                                   - 'charge': uses initial_charges from atoms
-                                   - [lab1, lab2, ...]
-                                   (Default: None)
+        - add_legend (bool): if True, a legend specifying atom types is added
+                             (Default: False)
         - colors (str | iterable): specify color of atoms with str or values
                                    which will use the cmap
                                    - 'blue': all atoms blue
@@ -83,6 +81,12 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                            - 'ccw': counterclockwise [left-to-right]
                            - 'cw': clockwise [right-to-left]
                            (Default: 'ccw')
+        - labels (str | iterable): type or list of labels to add to atoms
+                                   - 'symbol': uses chemical symbol
+                                   - 'colors': uses values from colors KArg
+                                   - 'charge': uses initial_charges from atoms
+                                   - [lab1, lab2, ...]
+                                   (Default: None)
     """
     # if save_path is not a gif, give it a gif extension
     if not save_path.lower().endswith('.gif'):
@@ -120,6 +124,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     if use_charges:
         colors = atoms.get_initial_charges().copy()
         colorbar = True
+        add_legend = False
         center_data = True
 
     # align max variance to x, y, z using PCA
@@ -179,31 +184,29 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     assert len(colors) == len(atoms)
 
     # initialize plt figure and axis
-    if colorbar and not block_colorbar:
-        fig, (ax, cb_ax) = plt.subplots(1, 2,
-                                        gridspec_kw={'width_ratios': [30, 1]},
-                                        figsize=fig_size)
+    # add extra subplot if a colorbar or legend is needed
+    if colorbar and not block_colorbar and not add_legend:
+        fig, (ax, extra_ax) = plt.subplots(1, 2,
+                                           gridspec_kw={'width_ratios': [30,
+                                                                         1]},
+                                           figsize=fig_size)
         fig.subplots_adjust(wspace=0, hspace=0)
 
-        # create color bar with cb_ax
-        if center_data:
-            max_mag = abs(values).max()
-            minval = -max_mag
-            maxval = max_mag
-        else:
-            minval = values.min()
-            maxval = values.max()
-        norm = matplotlib.colors.Normalize(vmin=minval,
-                                           vmax=maxval)
-        cb = matplotlib.colorbar.ColorbarBase(cb_ax, cmap=cmap,
-                                              norm=norm)
-        # set font size
-        cb.ax.tick_params(labelsize=11)
-
+    # make single subplot
     else:
         fig, ax = plt.subplots(figsize=fig_size)
         if colorbar:
             print('No data given for colorbar!')
+
+    # set axis limits (include offset as buffer)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.axis('off')
+
+    # set aspect ratio to 1
+    ax.set_aspect(1.)
 
     # see if labels passed in
     if labels is not None:
@@ -248,16 +251,6 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             ann = None
         annotations.append(ann)
 
-    # set axis limits (include offset as buffer)
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.axis('off')
-
-    # set aspect ratio to 1
-    ax.set_aspect(1.)
-
     # draw initial bonds
     if add_bonds:
         # calculate bond width info relative to axis units
@@ -266,7 +259,61 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         bond_info = (bond_width_scaled, bond_fill_scaled)
 
         radii = np.array([covalent_radii[i.number] for i in atoms])
-        utils.draw_bonds(atoms, ax, radii, bond_info)
+        bonds = utils.get_bonds(atoms, radii)
+        utils.draw_bonds(atoms, ax, radii, bond_info, bonds=bonds)
+
+    # add legend of atom types
+    if add_legend:
+        if colorbar:
+            print('Cannot have colorbar and legend. '
+                  'Only adding legend to gif')
+
+        # create an ordered, unique list of atom types
+        all_symbols = atoms.get_chemical_symbols()
+        symbols = sorted(set(all_symbols))
+        leg = []
+        for s in symbols:
+            # find an atom of given type
+            a = atoms[all_symbols.index(s)]
+
+            # calc marker size
+            ms = utils.angstrom_to_axunits(
+                covalent_radii[a.number] * scale,
+                ax) * 2
+
+            leg.append(Line2D([0], [0], marker='o', ls='',
+                              markerfacecolor=colors[a.index],
+                              markeredgecolor='k',
+                              markersize=ms))
+        # create legend
+        ax.legend(leg, symbols, frameon=False,
+                  prop=dict(size=11, weight='bold'),
+                  handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01, ax)),
+                  borderpad=0,
+                  borderaxespad=0,
+                  columnspacing=0,
+                  markerscale=1,
+                  labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08, ax)),
+                  loc='center left',
+                  framealpha=0,
+                  ncol=(len(leg) // 10) + 1,
+                  bbox_to_anchor=(1, 0.5))
+
+    # add colorbar
+    elif colorbar and not block_colorbar:
+        if center_data:
+            max_mag = abs(values).max()
+            minval = -max_mag
+            maxval = max_mag
+        else:
+            minval = values.min()
+            maxval = values.max()
+        norm = matplotlib.colors.Normalize(vmin=minval,
+                                           vmax=maxval)
+        cb = matplotlib.colorbar.ColorbarBase(extra_ax, cmap=cmap,
+                                              norm=norm)
+        # set font size
+        cb.ax.tick_params(labelsize=11)
 
     # call tight_layout
     fig.tight_layout()
@@ -295,7 +342,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         # redraws bonds
         if add_bonds:
             ax.lines = []
-            utils.draw_bonds(atoms, ax, radii, bond_info)
+            utils.draw_bonds(atoms, ax, radii, bond_info, bonds=bonds)
             fig.canvas.draw()
         # hi Mike!!
 
