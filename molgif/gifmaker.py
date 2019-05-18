@@ -157,25 +157,18 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         try:
             float(colors[0])
 
-            temp = np.array(colors)
+            # if center_data, ensure mid color is 0
+            if center_data:
+                maxval = max(abs(colors))
+                minval = -maxval
+            else:
+                maxval = max(temp)
+                minval = min(temp)
 
-            # values to be used for colorbar
-            values = temp.copy()
+            norm = matplotlib.colors.Normalize(vmin=minval, vmax=maxval)
 
-            # shift all values to positive
-            if min(colors) < 0:
-                # if center_data, ensure mid color is 0
-                if center_data:
-                    shift = max(abs(colors))
-                else:
-                    shift = abs(min(colors))
-                temp += shift
-
-            # normalize data [0, 1]
-            temp = temp / max(temp)
-
-            # create Red Blue color map
-            colors = [cmap(t) for t in temp]
+            # create color map
+            colors = [cmap(norm(t)) for t in colors]
             block_colorbar = False
         except:
             assert isinstance(colors[0], str)
@@ -301,15 +294,6 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # add colorbar
     elif colorbar and not block_colorbar:
-        if center_data:
-            max_mag = abs(values).max()
-            minval = -max_mag
-            maxval = max_mag
-        else:
-            minval = values.min()
-            maxval = values.max()
-        norm = matplotlib.colors.Normalize(vmin=minval,
-                                           vmax=maxval)
         cb = matplotlib.colorbar.ColorbarBase(extra_ax, cmap=cmap,
                                               norm=norm)
         # set font size
