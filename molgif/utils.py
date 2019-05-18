@@ -126,6 +126,7 @@ def draw_bonds(atoms, ax, radii, bond_info):
 
 
 def get_fig_bounds(atoms, rot_axis='y', offset=2):
+    assert offset >= 0
     # max x and y dists for molecule
     # start by adding in offset
     minx = -offset
@@ -145,7 +146,7 @@ def get_fig_bounds(atoms, rot_axis='y', offset=2):
 
     elif 'y' in rot_axis:
         # account for z coord in x since atoms rotate about y
-        distx = np.linalg.norm(atoms.positions[:, 0:2:2], axis=1).max()
+        distx = np.linalg.norm(atoms.positions[:, 0:3:2], axis=1).max()
         minx -= distx
         maxx += distx
 
