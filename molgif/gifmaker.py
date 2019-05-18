@@ -4,7 +4,7 @@ import os
 import re
 import platform
 import ase
-from ase.data import covalent_radii
+from ase.data import covalent_radii, chemical_symbols
 from ase.data.colors import jmol_colors
 import numpy as np
 import matplotlib
@@ -24,7 +24,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
             add_legend=False, colors=None, center_data=True, colorbar=False,
             cmap=cm.bwr_r, use_charges=False, max_px=600, bond_width=0.25,
-            direction='ccw', labels=None):
+            direction='ccw', leg_order=None, legend_max_ms=20, labels=None):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -89,6 +89,14 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                            - 'ccw': counterclockwise [left-to-right]
                            - 'cw': clockwise [right-to-left]
                            (Default: 'ccw')
+        - leg_order (list | str): if given, use it to order the legend
+                                  - can also give str of single atom type
+                                  - 'size': largest to smallest
+                                  - 'size_r': smallest to largest
+                                  (Default: None (alphabetical order))
+        - legend_max_ms (int): scales legend such that largest atom type
+                               is represented with markersize=<legend_max_ms>
+                               (Default: 20pts)
         - labels (str | iterable): type or list of labels to add to atoms
                                    - 'symbol': uses chemical symbol
                                    - 'colors': uses values from colors KArg
@@ -301,35 +309,63 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             # create an ordered, unique list of atom types
             all_symbols = atoms.get_chemical_symbols()
             symbols = sorted(set(all_symbols))
-            leg = []
-            for s in symbols:
-                # find an atom of given type
-                a = atoms[all_symbols.index(s)]
 
-                # calc marker size
-                ms = utils.angstrom_to_axunits(
-                    covalent_radii[a.number] * scale,
-                    ax) * 2
+            # use custom legend order if given
+            if isinstance(leg_order, str):
+                # order legend by size
+                if leg_order in ['size', 'size_r']:
+                    reverse = True if leg_order == 'size' else False
+                    leg_order = sorted(
+                        symbols,
+                        key=lambda z: list(covalent_radii)[
+                            chemical_symbols.index(z)],
+                        reverse=reverse)
+                else:
+                    leg_order = [leg_order]
+            if isinstance(leg_order, list) or isinstance(leg_order, np.ndarry):
+                # any types not in leg_order will be appended in
+                # alphabetical order
+                leg_order = list(leg_order) + [s for s in symbols
+                                               if s not in leg_order]
 
-                leg.append(Line2D([0], [0], marker='o', ls='',
-                                  markerfacecolor=colors[a.index],
-                                  markeredgecolor='k',
-                                  markersize=ms))
+                symbols = sorted(symbols, key=lambda z: leg_order.index(z))
+
+            # get an atom object of each type
+            a_objs = [atoms[all_symbols.index(s)] for s in symbols]
+
+            # calculate sizes of each atom
+            sizes = np.array([utils.angstrom_to_axunits(
+                              covalent_radii[a.number] * scale, ax) * 2
+                              for a in a_objs])
+
+            # normalize sizes such that largest atom
+            # has size of <legend_max_ms>
+            sizes = sizes * (legend_max_ms / sizes.max())
+
+            # create legend objects
+            leg = [Line2D([0], [0], marker='o', ls='',
+                          markerfacecolor=colors[a.index],
+                          markeredgecolor='k',
+                          markersize=ms)
+                   for a, ms in zip(a_objs, sizes)]
+
             # create legend
-            ax.legend(leg, symbols, frameon=False,
-                      prop=dict(size=11, weight='bold'),
-                      handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01,
-                                                                      ax)),
-                      borderpad=0,
-                      borderaxespad=0,
-                      columnspacing=0,
-                      markerscale=1,
-                      labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08,
-                                                                     ax)),
-                      loc='center left',
-                      framealpha=0,
-                      ncol=(len(leg) // 10) + 1,
-                      bbox_to_anchor=(1, 0.5))
+            ax.legend(
+                leg,
+                symbols,
+                frameon=False,
+                prop=dict(size=11, weight='bold'),
+                handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01, ax)),
+                borderpad=0,
+                borderaxespad=0,
+                columnspacing=0,
+                markerscale=1,
+                labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08, ax)),
+                loc='center left',
+                framealpha=0,
+                # up to ten atom types per column
+                ncol=(len(leg) // 10) + 1,
+                bbox_to_anchor=(1, 0.5))
 
     # add colorbar
     elif colorbar and not block_colorbar:
