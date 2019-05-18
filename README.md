@@ -22,6 +22,13 @@ create smooth gifs of rotating molecules
 
 ![biphenyl](gifs/biphenyl.gif)
 
+### Add a legend
+
+    molgif.rot_gif(molecule, save_path, autorotate=True,
+                   add_legend=True)
+
+![biphenyl-legend](gifs/biphenyl-legend.gif)
+
 ### Adjust loop time and FPS
 
     # loop_time = time to complete one rotation (seconds)
