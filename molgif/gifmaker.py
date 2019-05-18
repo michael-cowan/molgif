@@ -21,10 +21,10 @@ if platform.system().lower().startswith('windows'):
 
 
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
-            auto_rotate=False, recenter=True, rot_axis='y', add_legend=False,
-            colors=None, center_data=True, colorbar=False, cmap=cm.bwr_r,
-            use_charges=False, max_px=600, bond_width=0.25, direction='ccw',
-            labels=None):
+            auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
+            add_legend=False, colors=None, center_data=True, colorbar=False,
+            cmap=cm.bwr_r, use_charges=False, max_px=600, bond_width=0.25,
+            direction='ccw', labels=None):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -47,6 +47,10 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         - recenter (bool): if True, atoms are centered to origin
                            based on avg. coord
                            (Default: True)
+        - anchor (int): if given, atoms[anchor] will be set to the origin
+                        so all other atoms rotate around it while it remains
+                        stationary
+                        (Default: None)
         - rot_axis (str): specify axis to rotate about
                           - x (left-to-right), y (bot-to-top)
                           - can be: 'y' | 'x' | 'z',
@@ -55,11 +59,13 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                           (Default: 'y')
         - add_legend (bool): if True, a legend specifying atom types is added
                              (Default: False)
-        - colors (str | iterable): specify color of atoms with str or values
-                                   which will use the cmap
+        - colors (str | iterable | dict): specify atom colors with str, dict,
+                                          or values which will use the cmap
                                    - 'blue': all atoms blue
                                    - ['blue', 'white', ...]: label each atom
                                    - [0, 1.1, -2.3...]: cmap used to color
+                                   - {'Au': 'purple'}: use dict to color by
+                                     by atom type - types not given use jmol
                                    (Default: None -> jmol colors used)
         - center_data (bool): if True, colors are centered about middle of cmap
                               - ensures (-) and (+) values are different color
@@ -144,16 +150,42 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     elif recenter:
         atoms.positions -= atoms.positions.mean(0)
 
+    # anchor specific atom to origin (all other atoms will rotate around it)
+    if anchor:
+        if isinstance(anchor, int) and 0 <= anchor <= len(atoms) - 1:
+            atoms.positions -= atoms[anchor].position
+        else:
+            print('Invalid anchor argument was given and will be ignored')
+
     # calculate figure size
     # calculate axis limits (include offset as buffer)
     fig_size, xlim, ylim = utils.get_fig_bounds(atoms, rot_axis=rot_axis)
 
     # don't allow colorbar unless values given
     block_colorbar = True
+
+    # don't allow legend if atoms are not colored by type
+    block_legend = True
+
     if colors is None:
         colors = [jmol_colors[i.number] for i in atoms]
+        block_legend = False
     elif isinstance(colors, str):
         colors = [colors] * len(atoms)
+    elif isinstance(colors, dict):
+        colors_dict = colors.copy()
+
+        not_found = []
+        symbols = set(atoms.get_chemical_symbols())
+        not_found = [c for c in colors_dict if c not in symbols]
+        if not_found:
+            print('%s do not match atom types.' % (', '.join(not_found)))
+
+        # use combination of color_dict and jmol_colors
+        colors = [colors_dict.get(i.symbol, jmol_colors[i.number])
+                  for i in atoms]
+        block_legend = False
+
     elif type(colors) in [list, np.ndarray]:
         # if values (ex charge), create Red Blue colormap
         try:
@@ -175,12 +207,12 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         except:
             assert isinstance(colors[0], str)
 
-    colors = np.array(colors)
+    # all atoms must be accounted for in colors list
     assert len(colors) == len(atoms)
 
     # initialize plt figure and axis
     # add extra subplot if a colorbar or legend is needed
-    if colorbar and not block_colorbar and not add_legend:
+    if (colorbar and not block_colorbar) and not add_legend:
         fig, (ax, extra_ax) = plt.subplots(1, 2,
                                            gridspec_kw={'width_ratios': [30,
                                                                          1]},
@@ -259,40 +291,45 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # add legend of atom types
     if add_legend:
-        if colorbar:
-            print('Cannot have colorbar and legend. '
-                  'Only adding legend to gif')
+        if block_legend:
+            print('Cannot add legend unless atoms are colored by type.')
+        else:
+            if colorbar:
+                print('Cannot have colorbar and legend. '
+                      'Only adding legend to gif')
 
-        # create an ordered, unique list of atom types
-        all_symbols = atoms.get_chemical_symbols()
-        symbols = sorted(set(all_symbols))
-        leg = []
-        for s in symbols:
-            # find an atom of given type
-            a = atoms[all_symbols.index(s)]
+            # create an ordered, unique list of atom types
+            all_symbols = atoms.get_chemical_symbols()
+            symbols = sorted(set(all_symbols))
+            leg = []
+            for s in symbols:
+                # find an atom of given type
+                a = atoms[all_symbols.index(s)]
 
-            # calc marker size
-            ms = utils.angstrom_to_axunits(
-                covalent_radii[a.number] * scale,
-                ax) * 2
+                # calc marker size
+                ms = utils.angstrom_to_axunits(
+                    covalent_radii[a.number] * scale,
+                    ax) * 2
 
-            leg.append(Line2D([0], [0], marker='o', ls='',
-                              markerfacecolor=colors[a.index],
-                              markeredgecolor='k',
-                              markersize=ms))
-        # create legend
-        ax.legend(leg, symbols, frameon=False,
-                  prop=dict(size=11, weight='bold'),
-                  handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01, ax)),
-                  borderpad=0,
-                  borderaxespad=0,
-                  columnspacing=0,
-                  markerscale=1,
-                  labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08, ax)),
-                  loc='center left',
-                  framealpha=0,
-                  ncol=(len(leg) // 10) + 1,
-                  bbox_to_anchor=(1, 0.5))
+                leg.append(Line2D([0], [0], marker='o', ls='',
+                                  markerfacecolor=colors[a.index],
+                                  markeredgecolor='k',
+                                  markersize=ms))
+            # create legend
+            ax.legend(leg, symbols, frameon=False,
+                      prop=dict(size=11, weight='bold'),
+                      handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01,
+                                                                      ax)),
+                      borderpad=0,
+                      borderaxespad=0,
+                      columnspacing=0,
+                      markerscale=1,
+                      labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08,
+                                                                     ax)),
+                      loc='center left',
+                      framealpha=0,
+                      ncol=(len(leg) // 10) + 1,
+                      bbox_to_anchor=(1, 0.5))
 
     # add colorbar
     elif colorbar and not block_colorbar:
