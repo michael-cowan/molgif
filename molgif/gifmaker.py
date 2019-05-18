@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import molgif.utils as utils
 import os
 import re
+import platform
 import ase
 from ase.data import covalent_radii
 from ase.data.colors import jmol_colors
@@ -13,9 +14,10 @@ import matplotlib.animation as anim
 import matplotlib.pyplot as plt
 
 # ensure that ImageMagick writer is found (and not Windows' convert.exe)
-if anim.rcParams['animation.convert_path'].endswith(('convert',
-                                                     'convert.exe')):
-    anim.rcParams['animation.convert_path'] = 'magick'
+if platform.system().lower().startswith('windows'):
+    if anim.rcParams['animation.convert_path'].endswith(('convert',
+                                                        'convert.exe')):
+        anim.rcParams['animation.convert_path'] = 'magick'
 
 
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
