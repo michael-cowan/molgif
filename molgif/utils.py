@@ -93,7 +93,7 @@ def get_bonds(atoms, radii, scale=1.25):
     return bonds
 
 
-def draw_bonds(atoms, ax, radii, bond_info):
+def draw_bonds(atoms, ax, radii, bond_info, bonds=None):
     """
     Adds bonds to matplotlib axis
 
@@ -111,8 +111,10 @@ def draw_bonds(atoms, ax, radii, bond_info):
     # bond width (black line) and bond fill (white line)
     bond_width, bond_fill = bond_info
 
-    # find indices of bonds
-    bonds = get_bonds(atoms, radii)
+    # find indices of bonds if not passed in
+    if bonds is None:
+        bonds = get_bonds(atoms, radii)
+
     for b in bonds:
         p1 = atoms[b[0]].position
         p2 = atoms[b[1]].position
