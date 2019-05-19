@@ -6,7 +6,7 @@ create smooth gifs of rotating molecules
 
 ## Examples
 
-### Automatically rotate molecule for better view
+### Automatically rotate molecule for the best angle
 
     import molgif
     import ase.build
@@ -22,7 +22,7 @@ create smooth gifs of rotating molecules
 
 ![biphenyl](gifs/biphenyl.gif)
 
-### Specify color of each atom
+### Specify the color of each atom
 
     # can be a string for one color or a list of custom colors
     rainbow = ['red', 'orange', 'yellow', 'green', 'blue', 'violet'] * 4
@@ -35,7 +35,7 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
 
-### Use dictionary to quickly color by atom type
+### Use a dictionary to quickly color by atom type
 
     # default colors will be used for types not specified
     molgif.rot_gif(molecule, save_path, auto_rotate=True,
