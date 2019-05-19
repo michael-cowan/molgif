@@ -264,6 +264,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                 labels = None
 
     # create atom patches and add to ax
+    borderwidth = 0.05  # angstroms
     patches = []
     annotations = []
     for i, a in enumerate(atoms):
@@ -271,6 +272,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                           radius=covalent_radii[a.number] * scale,
                           facecolor=colors[i],
                           edgecolor='k',
+                          linewidth=utils.angstrom_to_axunits(borderwidth, ax),
                           zorder=a.z)
         patches.append(circ)
         ax.add_artist(circ)
@@ -290,12 +292,18 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     if add_bonds:
         # calculate bond width info relative to axis units
         bond_width_scaled = utils.angstrom_to_axunits(bond_width, ax)
-        bond_fill_scaled = utils.angstrom_to_axunits(bond_width * 0.7, ax)
+
+        # use same borderwidth as atoms
+        bond_fill_scaled = utils.angstrom_to_axunits(
+            bond_width - 2 * borderwidth, ax)
+
         bond_info = (bond_width_scaled, bond_fill_scaled)
 
         radii = np.array([covalent_radii[i.number] for i in atoms])
+        atomic_radii = radii * scale
         bonds = utils.get_bonds(atoms, radii)
-        utils.draw_bonds(atoms, ax, radii, bond_info, bonds=bonds)
+        utils.draw_bonds(atoms, ax, radii, atomic_radii,
+                         bond_info, bonds=bonds)
 
     # add legend of atom types
     if add_legend:
@@ -395,13 +403,16 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
             # translates text
             if annotations[i]:
-                annotations[i].x = a.x
-                annotations[i].zorder = a.z + 0.001
+                annotations[i].set_x(a.x)
+                annotations[i].set_zorder(a.z + 0.001)
+                # annotations[i].x = a.x
+                # annotations[i].zorder = a.z + 0.001
 
         # redraws bonds
         if add_bonds:
             ax.lines = []
-            utils.draw_bonds(atoms, ax, radii, bond_info, bonds=bonds)
+            utils.draw_bonds(atoms, ax, radii, atomic_radii,
+                             bond_info, bonds=bonds)
             fig.canvas.draw()
         # hi Mike!!
 

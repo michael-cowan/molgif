@@ -93,7 +93,8 @@ def get_bonds(atoms, radii, scale=1.25):
     return bonds
 
 
-def draw_bonds(atoms, ax, radii, bond_info, bonds=None):
+def draw_bonds(atoms, ax, radii, atomic_radii,
+               bond_info, bonds=None):
     """
     Adds bonds to matplotlib axis
 
@@ -118,13 +119,35 @@ def draw_bonds(atoms, ax, radii, bond_info, bonds=None):
     for b in bonds:
         p1 = atoms[b[0]].position
         p2 = atoms[b[1]].position
-        x = p1[0], p2[0]
-        y = p1[1], p2[1]
-        zorder = min(p1[2], p2[2])
+
+        # vector between two atoms
+        vec = p2 - p1
+
+        # normalize the vector
+        normvec = vec / np.linalg.norm(vec)
+
+        # calc pts for black line of bond (outline)
+        xy1 = p1 + atomic_radii[b[0]] * normvec
+        xy2 = p2 - atomic_radii[b[1]] * normvec
+
+        # add buffer to bond length (max buffer when zdist is minimum)
+        zdist = abs(xy1[2] - xy2[2])
+        buffer = 0.078 * np.exp(-zdist)
+
+        xy1 += buffer * normvec
+        xy2 -= buffer * normvec
+
+        x = [xy1[0], xy2[0]]
+        y = [xy1[1], xy2[1]]
+
+        # use avg z for zorder
+        zorder = (xy1[2] + xy2[2]) / 2
 
         # draw thinner white line over black line to create bordered bonds
-        ax.plot(x, y, zorder=zorder - 0.001, color='k', lw=bond_width)
-        ax.plot(x, y, zorder=zorder, color='white', lw=bond_fill)
+        ax.plot(x, y, zorder=zorder - 0.001, color='k', lw=bond_width,
+                solid_capstyle='round')
+        ax.plot(x, y, zorder=zorder, color='white', lw=bond_fill,
+                solid_capstyle='round')
 
 
 def get_fig_bounds(atoms, rot_axis='y', offset=2):
