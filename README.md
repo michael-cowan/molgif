@@ -76,7 +76,7 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-no-bonds](gifs/biphenyl-no-bonds.gif)
 
-### Switch rotation axis
+### Change rotation axis
 
     # switch between x, y (Default), or z
     molgif.rot_gif(molecule, save_path, rot_axis='z')
@@ -100,7 +100,7 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-cw](gifs/biphenyl-cw.gif)
 
-### Visualize charges and include a colorbar
+### Visualize charges
 
     import random
 
