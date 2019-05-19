@@ -330,7 +330,8 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                         reverse=reverse)
                 else:
                     leg_order = [leg_order]
-            if isinstance(leg_order, list) or isinstance(leg_order, np.ndarry):
+            if isinstance(leg_order, list) or isinstance(leg_order,
+                                                         np.ndarray):
                 # any types not in leg_order will be appended in
                 # alphabetical order
                 leg_order = list(leg_order) + [s for s in symbols

@@ -54,7 +54,7 @@ create smooth gifs of rotating molecules
     # define index of atom to anchor
     anchor = 3
 
-    colors = ['white'] * len(mol)
+    colors = ['white'] * len(molecule)
     colors[anchor] = '#0892d0'
 
     molgif.rot_gif(molecule, save_path, colors=colors,
@@ -83,20 +83,14 @@ create smooth gifs of rotating molecules
 
 ![biphenyl-rotz](gifs/biphenyl-rotz.gif)
 
-### Switch rotation direction and adjust bond widths
+### Switch rotation direction
 
     # counterclockwise (ccw)[Default] or clockwise (cw)
     # based on rot_axis
     # 'x': view from left
     # 'y': view from top
     # 'z': view into screen
-    direction = 'cw'
-
-    # specify bond width in Angstrom
-    bond_width = 0.4
-
-    molgif.rot_gif(molecule, save_path, direction=direction,
-                   bond_width=bond_width)
+    molgif.rot_gif(molecule, save_path, direction='cw')
 
 ![biphenyl-cw](gifs/biphenyl-cw.gif)
 
