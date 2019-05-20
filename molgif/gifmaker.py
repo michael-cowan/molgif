@@ -23,8 +23,8 @@ if platform.system().lower().startswith('windows'):
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
             add_legend=False, colors=None, center_data=True, colorbar=False,
-            cmap=cm.bwr_r, use_charges=False, max_px=600, bond_width=0.25,
-            direction='ccw', leg_order=None, legend_max_ms=20, labels=None):
+            cmap=cm.bwr_r, use_charges=False, max_px=600, direction='ccw',
+            leg_order=None, legend_max_ms=20, labels=None):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -79,8 +79,6 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                               (Default: False)
         - max_px (int): sets pixel count for longest side
                         (Default: 600)
-        - bond_width (float): width of bonds to be drawn (in Angstroms)
-                              (Default: 0.2 Angstrom)
         - direction (str): direction for molecule to rotate
                            - rot_axis='y': (looking down from the top)
                            - rot_axis='x': (looking from the right)
@@ -290,12 +288,15 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # draw initial bonds
     if add_bonds:
+        # can not be a variable until bond ends can be properly scaled
+        ang_bond_width = 0.25  # Angstrom
+
         # calculate bond width info relative to axis units
-        bond_width_scaled = utils.angstrom_to_axunits(bond_width, ax)
+        bond_width_scaled = utils.angstrom_to_axunits(ang_bond_width, ax)
 
         # use same borderwidth as atoms
         bond_fill_scaled = utils.angstrom_to_axunits(
-            bond_width - 2 * borderwidth, ax)
+            ang_bond_width - 2 * borderwidth, ax)
 
         bond_info = (bond_width_scaled, bond_fill_scaled)
 
