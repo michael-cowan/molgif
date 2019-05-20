@@ -107,7 +107,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         save_path += '.gif'
 
     # total number of frames required
-    frames = fps * loop_time
+    frames = int(round(fps * loop_time))
 
     # rotation angles for atoms object
     rot = 360 / frames
@@ -129,7 +129,7 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
     # print rotation gif info
     print('          Title: %s' % (os.path.basename(save_path)))
-    print('      Loop time: %i s' % loop_time)
+    print('      Loop time: %.2f s' % loop_time)
     print('            FPS: %i' % fps)
     print('   Total frames: %i' % frames)
     print(' Building frame: ' + dig_str % 1, end='\r')
