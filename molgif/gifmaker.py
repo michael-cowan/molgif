@@ -1,6 +1,7 @@
 from __future__ import division, print_function
 import molgif.utils as utils
 import os
+import sys
 import re
 import platform
 import ase
@@ -24,86 +25,91 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
             add_legend=False, colors=None, center_data=True, colorbar=False,
             cb_range=None, cmap=cm.bwr_r, use_charges=False, max_px=600,
-            direction='ccw', leg_order=None, legend_max_ms=20, labels=None):
+            direction='ccw', leg_order=None, legend_max_ms=20, labels=None,
+            bond_color='white', bond_edgecolor='k'):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
     Args:
-        - atoms (ase.Atoms): atoms to be animated
-        - save_path (str): path to save gif
+    - atoms (ase.Atoms): atoms to be animated
+    - save_path (str): path to save gif
 
     KArgs:
-        - loop_time (int): number of seconds for atoms to complete one rotation
-                           (Default: 8)
-        - fps (int): frames per second in animation
-                     (Default: 20)
-        - scale (float): scales size of atoms: scale * ase.data.covalent_radii
-                         (Default: 0.9)
-        - add_bonds (bool): if True, bonds are drawn
+    - loop_time (int): number of seconds for atoms to complete one rotation
+                        (Default: 8)
+    - fps (int): frames per second in animation
+                    (Default: 20)
+    - scale (float): scales size of atoms: scale * ase.data.covalent_radii
+                        (Default: 0.9)
+    - add_bonds (bool): if True, bonds are drawn
+                        (Default: True)
+    - auto_rotate (bool): if True, PCA is applied to coords to orient atoms
+                            such that max variance is in x-axis
+                            (Default: False)
+    - recenter (bool): if True, atoms are centered to origin
+                        based on avg. coord
+                        (Default: True)
+    - anchor (int): if given, atoms[anchor] will be set to the origin
+                    so all other atoms rotate around it while it remains
+                    stationary
+                    (Default: None)
+    - rot_axis (str): specify axis to rotate about
+                        - x (left-to-right), y (bot-to-top)
+                        - can be: 'y' | 'x' | 'z',
+                        - can also be '-x' to invert rotation
+                        (same as changing direction)
+                        (Default: 'y')
+    - add_legend (bool): if True, a legend specifying atom types is added
+                            (Default: False)
+    - colors (str | iterable | dict): specify atom colors with str, dict,
+                                        or values which will use the cmap
+                                - 'blue': all atoms blue
+                                - ['blue', 'white', ...]: label each atom
+                                - [0, 1.1, -2.3...]: cmap used to color
+                                - {'Au': 'purple'}: use dict to color by
+                                    by atom type - types not given use jmol
+                                (Default: None -> jmol colors used)
+    - center_data (bool): if True, colors are centered about middle of cmap
+                            - ensures (-) and (+) values are different color
+                            - ex) for RdBu cmap, 0 = 'white'
                             (Default: True)
-        - auto_rotate (bool): if True, PCA is applied to coords to orient atoms
-                              such that max variance is in x-axis
-                              (Default: False)
-        - recenter (bool): if True, atoms are centered to origin
-                           based on avg. coord
-                           (Default: True)
-        - anchor (int): if given, atoms[anchor] will be set to the origin
-                        so all other atoms rotate around it while it remains
-                        stationary
-                        (Default: None)
-        - rot_axis (str): specify axis to rotate about
-                          - x (left-to-right), y (bot-to-top)
-                          - can be: 'y' | 'x' | 'z',
-                          - can also be '-x' to invert rotation
-                            (same as changing direction)
-                          (Default: 'y')
-        - add_legend (bool): if True, a legend specifying atom types is added
-                             (Default: False)
-        - colors (str | iterable | dict): specify atom colors with str, dict,
-                                          or values which will use the cmap
-                                   - 'blue': all atoms blue
-                                   - ['blue', 'white', ...]: label each atom
-                                   - [0, 1.1, -2.3...]: cmap used to color
-                                   - {'Au': 'purple'}: use dict to color by
-                                     by atom type - types not given use jmol
-                                   (Default: None -> jmol colors used)
-        - center_data (bool): if True, colors are centered about middle of cmap
-                              - ensures (-) and (+) values are different color
-                              - ex) for RdBu cmap, 0 = 'white'
-                              (Default: True)
-        - colorbar (bool): if True and colors given, a colorbar is added to gif
-                           (Default: False)
-        - cb_range (tuple | list): (minval, maxval) will be used as colorbar range
-                                   if given
-                                   (Default: None)
-        - cmap (ColorMap): cmap to be used if colors is specified
-                           (Default: matplotlib.cm.bwr_r)
-        - use_charges (bool): if True, colored by initial_charges in atoms obj
-                              (Default: False)
-        - max_px (int): sets pixel count for longest side
-                        (Default: 600)
-        - direction (str): direction for molecule to rotate
-                           - rot_axis='y': (looking down from the top)
-                           - rot_axis='x': (looking from the right)
-                           - rot_axis='z': (looking into screen)
-                           OPTIONS:
-                           - 'ccw': counterclockwise [left-to-right]
-                           - 'cw': clockwise [right-to-left]
-                           (Default: 'ccw')
-        - leg_order (list | str): if given, use it to order the legend
-                                  - can also give str of single atom type
-                                  - 'size': largest to smallest
-                                  - 'size_r': smallest to largest
-                                  (Default: None (alphabetical order))
-        - legend_max_ms (int): scales legend such that largest atom type
-                               is represented with markersize=<legend_max_ms>
-                               (Default: 20pts)
-        - labels (str | iterable): type or list of labels to add to atoms
-                                   - 'symbol': uses chemical symbol
-                                   - 'colors': uses values from colors KArg
-                                   - 'charge': uses initial_charges from atoms
-                                   - [lab1, lab2, ...]
-                                   (Default: None)
+    - colorbar (bool): if True and colors given, a colorbar is added to gif
+                        (Default: False)
+    - cb_range (tuple | list): (minval, maxval) will be used as colorbar
+                                range if given
+                                (Default: None)
+    - cmap (ColorMap): cmap to be used if colors is specified
+                        (Default: matplotlib.cm.bwr_r)
+    - use_charges (bool): if True, colored by initial_charges in atoms obj
+                            (Default: False)
+    - max_px (int): sets pixel count for longest side
+                    (Default: 600)
+    - direction (str): direction for molecule to rotate
+                        - rot_axis='y': (looking down from the top)
+                        - rot_axis='x': (looking from the right)
+                        - rot_axis='z': (looking into screen)
+                        OPTIONS:
+                        - 'ccw': counterclockwise [left-to-right]
+                        - 'cw': clockwise [right-to-left]
+                        (Default: 'ccw')
+    - leg_order (list | str): if given, use it to order the legend
+                                - can also give str of single atom type
+                                - 'size': largest to smallest
+                                - 'size_r': smallest to largest
+                                (Default: None (alphabetical order))
+    - legend_max_ms (int): scales legend such that largest atom type
+                            is represented with markersize=<legend_max_ms>
+                            (Default: 20pts)
+    - labels (str | iterable): type or list of labels to add to atoms
+                                - 'symbol': uses chemical symbol
+                                - 'colors': uses values from colors KArg
+                                - 'charge': uses initial_charges from atoms
+                                - [lab1, lab2, ...]
+                                (Default: None)
+    - bond_color (str): specify color of bonds
+                        (Default: white)
+    - bond_edgecolor (str): specify edgecolor (border) of bonds
+                            (Default: black)
     """
     # if save_path is not a gif, give it a gif extension
     if not save_path.lower().endswith('.gif'):
@@ -311,7 +317,9 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         atomic_radii = radii * scale
         bonds = utils.get_bonds(atoms, radii)
         utils.draw_bonds(atoms, ax, radii, atomic_radii,
-                         bond_info, bonds=bonds)
+                         bond_info, bonds=bonds,
+                         bond_color=bond_color,
+                         bond_edgecolor=bond_edgecolor)
 
     # add legend of atom types
     if add_legend:
@@ -412,16 +420,20 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
 
             # translates text
             if annotations[i]:
-                annotations[i].set_x(a.x)
-                annotations[i].set_zorder(a.z + 0.001)
-                # annotations[i].x = a.x
-                # annotations[i].zorder = a.z + 0.001
+                if sys.verstion_info[0] == 3:
+                    annotations[i].set_x(a.x)
+                    annotations[i].set_zorder(a.z + 0.001)
+                else:
+                    annotations[i].x = a.x
+                    annotations[i].zorder = a.z + 0.001
 
         # redraws bonds
         if add_bonds:
             ax.lines = []
             utils.draw_bonds(atoms, ax, radii, atomic_radii,
-                             bond_info, bonds=bonds)
+                             bond_info, bonds=bonds,
+                             bond_color=bond_color,
+                             bond_edgecolor=bond_edgecolor)
             fig.canvas.draw()
         # hi Mike!!
 

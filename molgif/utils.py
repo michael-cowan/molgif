@@ -94,7 +94,8 @@ def get_bonds(atoms, radii, scale=1.25):
 
 
 def draw_bonds(atoms, ax, radii, atomic_radii,
-               bond_info, bonds=None):
+               bond_info, bonds=None, bond_color='white',
+               bond_edgecolor='k'):
     """
     Adds bonds to matplotlib axis
 
@@ -103,11 +104,18 @@ def draw_bonds(atoms, ax, radii, atomic_radii,
     ax (matplotib axis): axis object where bonds should be added
     radii (np.ndarray): bonding radii of atoms
                         if bonding radii overlap, a bond is drawn
-
-    KArgs:
+    atomic_radii (np.ndarray): actual radii of atoms used in gif
     bond_info (tuple): bond_width - width of black outline on bonds
                        bond_fill - width of white fill
                                    (controls outline thickness)
+
+    KArgs:
+    bonds (np.ndarray): can pass in already calculated bonds list
+                        (Default: None)
+    bond_color (str): color of bonds
+                      (Default: white)
+    bond_edgecolor (str): edge color (border) of bonds
+                          (Default: black)
     """
     # bond width (black line) and bond fill (white line)
     bond_width, bond_fill = bond_info
@@ -144,9 +152,9 @@ def draw_bonds(atoms, ax, radii, atomic_radii,
         zorder = (xy1[2] + xy2[2]) / 2
 
         # draw thinner white line over black line to create bordered bonds
-        ax.plot(x, y, zorder=zorder - 0.001, color='k', lw=bond_width,
-                solid_capstyle='round')
-        ax.plot(x, y, zorder=zorder, color='white', lw=bond_fill,
+        ax.plot(x, y, zorder=zorder - 0.001, color=bond_edgecolor,
+                lw=bond_width, solid_capstyle='round')
+        ax.plot(x, y, zorder=zorder, color=bond_color, lw=bond_fill,
                 solid_capstyle='round')
 
 
