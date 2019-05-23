@@ -101,9 +101,13 @@ create smooth gifs of rotating molecules
     # random charges [-1, 1]
     chgs = [-1 + 2 * random.random() for i in molecule]
 
+    # manually set the colorbar range (optional)
+    cb_range = (-1, 1)
+
     molecule.set_initial_charges(chgs)
 
-    molgif.rot_gif(molecule, save_path, use_charges=True)
+    molgif.rot_gif(molecule, save_path, use_charges=True,
+                   cb_range=cb_range)
 
 ![biphenyl-charges](gifs/biphenyl-charges.gif)
 

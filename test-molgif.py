@@ -108,7 +108,11 @@ save_path = os.path.join(desk, 'biphenyl-charges.gif')
 # random charges [-1, 1]
 chgs = [-1 + 2 * random.random() for i in molecule]
 
+# manually set the colorbar range (optional)
+cb_range = (-1, 1)
+
 # add the charges to atoms object
 molecule.set_initial_charges(chgs)
 
-molgif.rot_gif(molecule, save_path, max_px=max_px, use_charges=True)
+molgif.rot_gif(molecule, save_path, max_px=max_px, use_charges=True,
+               cb_range=cb_range)
