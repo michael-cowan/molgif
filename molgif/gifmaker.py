@@ -216,8 +216,9 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             # create color map
             colors = [cmap(norm(t)) for t in colors]
             block_colorbar = False
+        # else move on to the assertion
         except:
-            assert isinstance(colors[0], str)
+            pass
 
     # all atoms must be accounted for in colors list
     assert len(colors) == len(atoms)
