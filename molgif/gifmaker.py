@@ -23,8 +23,8 @@ if platform.system().lower().startswith('windows'):
 def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
             add_legend=False, colors=None, center_data=True, colorbar=False,
-            cmap=cm.bwr_r, use_charges=False, max_px=600, direction='ccw',
-            leg_order=None, legend_max_ms=20, labels=None):
+            cb_range=None, cmap=cm.bwr_r, use_charges=False, max_px=600,
+            direction='ccw', leg_order=None, legend_max_ms=20, labels=None):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -73,6 +73,9 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                               (Default: True)
         - colorbar (bool): if True and colors given, a colorbar is added to gif
                            (Default: False)
+        - cb_range (tuple | list): (minval, maxval) will be used as colorbar range
+                                   if given
+                                   (Default: None)
         - cmap (ColorMap): cmap to be used if colors is specified
                            (Default: matplotlib.cm.bwr_r)
         - use_charges (bool): if True, colored by initial_charges in atoms obj
@@ -197,8 +200,11 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         try:
             float(colors[0])
 
+            # use cb_range if given
+            if cb_range is not None and len(cb_range) == 2:
+                minval, maxval = cb_range
             # if center_data, ensure mid color is 0
-            if center_data:
+            elif center_data:
                 maxval = max(abs(colors))
                 minval = -maxval
             else:
