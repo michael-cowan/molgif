@@ -14,17 +14,14 @@ create smooth gifs of rotating molecules
     # load in molecule (ase.Atoms object)
     molecule = ase.build.molecule('biphenyl')
 
-    # specify save path
-    save_path = 'biphenyl.gif'
-
     # create rotating gif with rot_gif function
-    molgif.rot_gif(molecule, save_path, auto_rotate=True)
+    molgif.rot_gif(molecule, auto_rotate=True)
 
 ![biphenyl](gifs/biphenyl.gif)
 
 ### Add a legend
 
-    molgif.rot_gif(molecule, save_path, add_legend=True)
+    molgif.rot_gif(molecule, add_legend=True)
 
 ![biphenyl-legend](gifs/biphenyl-legend.gif)
 
@@ -37,14 +34,14 @@ create smooth gifs of rotating molecules
     # list much match number of atoms
     rainbow = rainbow[:len(molecule)]
 
-    molgif.rot_gif(molecule, save_path, colors=rainbow)
+    molgif.rot_gif(molecule, colors=rainbow)
 
 ![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
 
 ### Use a dictionary to quickly color by atom type
 
     # default colors will be used for types not specified
-    molgif.rot_gif(molecule, save_path, colors=dict(C='hotpink'),
+    molgif.rot_gif(molecule, colors=dict(C='hotpink'),
                    add_legend=True)
 
 ![biphenyl-hotpink](gifs/biphenyl-hotpink.gif)
@@ -57,7 +54,7 @@ create smooth gifs of rotating molecules
     colors = ['white'] * len(molecule)
     colors[anchor] = '#0892d0'
 
-    molgif.rot_gif(molecule, save_path, colors=colors,
+    molgif.rot_gif(molecule, colors=colors,
                    anchor=anchor)
 
 ![biphenyl-anchor](gifs/biphenyl-anchor.gif)
@@ -65,13 +62,13 @@ create smooth gifs of rotating molecules
 ### Adjust loop time and FPS
 
     # loop_time = time to complete one rotation (seconds)
-    molgif.rot_gif(molecule, save_path, loop_time=2, fps=60)
+    molgif.rot_gif(molecule, loop_time=2, fps=60)
 
 ![biphenyl-2s-looptime](gifs/biphenyl-2s-looptime.gif)
 
 ### Turn off bonds and scale atomic sizes
 
-    molgif.rot_gif(molecule, save_path, add_bonds=False,
+    molgif.rot_gif(molecule, add_bonds=False,
                    scale=0.9)
 
 ![biphenyl-no-bonds](gifs/biphenyl-no-bonds.gif)
@@ -79,7 +76,7 @@ create smooth gifs of rotating molecules
 ### Change rotation axis
 
     # switch between x, y (Default), or z
-    molgif.rot_gif(molecule, save_path, rot_axis='z')
+    molgif.rot_gif(molecule, rot_axis='z')
 
 ![biphenyl-rotz](gifs/biphenyl-rotz.gif)
 
@@ -90,7 +87,7 @@ create smooth gifs of rotating molecules
     # 'x': view from left
     # 'y': view from top
     # 'z': view into screen
-    molgif.rot_gif(molecule, save_path, direction='cw')
+    molgif.rot_gif(molecule, direction='cw')
 
 ![biphenyl-cw](gifs/biphenyl-cw.gif)
 
@@ -106,7 +103,7 @@ create smooth gifs of rotating molecules
 
     molecule.set_initial_charges(chgs)
 
-    molgif.rot_gif(molecule, save_path, use_charges=True,
+    molgif.rot_gif(molecule, use_charges=True,
                    cb_range=cb_range)
 
 ![biphenyl-charges](gifs/biphenyl-charges.gif)

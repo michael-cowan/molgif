@@ -21,20 +21,26 @@ if platform.system().lower().startswith('windows'):
         anim.rcParams['animation.convert_path'] = 'magick'
 
 
-def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
-            auto_rotate=False, recenter=True, anchor=None, rot_axis='y',
-            add_legend=False, colors=None, center_data=True, colorbar=False,
-            cb_range=None, cmap=cm.bwr_r, use_charges=False, max_px=600,
-            direction='ccw', leg_order=None, legend_max_ms=20, labels=None,
-            bond_color='white', bond_edgecolor='k'):
+def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
+            scale=0.7, add_bonds=True, auto_rotate=False, recenter=True,
+            anchor=None, rot_axis='y', add_legend=False, colors=None,
+            center_data=True, colorbar=False, cb_range=None, cmap=cm.bwr_r,
+            use_charges=False, max_px=600, direction='ccw', leg_order=None,
+            legend_max_ms=20, labels=None, bond_color='white',
+            bond_edgecolor='k'):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
     Args:
     - atoms (ase.Atoms): atoms to be animated
-    - save_path (str): path to save gif
 
     KArgs:
+    - save_path (str): path to save gif - if None, chem formula and gif info
+                       are used
+                       (Default: '' -> "<chem formula>-GIF-INFO.gif")
+    - overwrite (bool): if False, '-<integer>' is added to end of name
+                        to avoid overwriting
+                        (Default: False)
     - loop_time (int): number of seconds for atoms to complete one rotation
                         (Default: 8)
     - fps (int): frames per second in animation
@@ -111,12 +117,24 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     - bond_edgecolor (str): specify edgecolor (border) of bonds
                             (Default: black)
     """
+    # if directory or nothing passed in, use chemical formula as name
+    if os.path.isdir(save_path) or not save_path:
+        noname = True
+        name = atoms.get_chemical_formula() + '.gif'
+        save_path = os.path.join(save_path, name)
+    else:
+        noname = False
+
     # if save_path is not a gif, give it a gif extension
     if not save_path.lower().endswith('.gif'):
         save_path += '.gif'
 
     # total number of frames required
     frames = int(round(fps * loop_time))
+
+    # number of digits in max frames
+    ndig = len(str(frames + 1))
+    dig_str = '%0{}i'.format(ndig)
 
     # rotation angles for atoms object
     rot = 360 / frames
@@ -132,19 +150,10 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     elif direction != 'ccw':
         print('Incorrect rotation specified - using counterclockwise (ccw)')
 
-    # number of digits in max frames
-    ndig = len(str(frames + 1))
-    dig_str = '%0{}i'.format(ndig)
-
-    # print rotation gif info
-    print('          Title: %s' % (os.path.basename(save_path)))
-    print('      Loop time: %.2f s' % loop_time)
-    print('            FPS: %i' % fps)
-    print('   Total frames: %i' % frames)
-    print(' Building frame: ' + dig_str % 1, end='\r')
-
     # color atoms based on charge
     if use_charges:
+        if noname:
+            save_path = save_path[:-4] + '-charges.gif'
         colors = atoms.get_initial_charges().copy()
         colorbar = True
         add_legend = False
@@ -169,6 +178,8 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     if anchor:
         if isinstance(anchor, int) and 0 <= anchor <= len(atoms) - 1:
             atoms.positions -= atoms[anchor].position
+            if noname:
+                save_path = save_path[:-4] + '-anchor.gif'
         else:
             print('Invalid anchor argument was given and will be ignored')
 
@@ -182,11 +193,14 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     # don't allow legend if atoms are not colored by type
     block_legend = True
 
+    customcolor = False
     if colors is None:
         colors = [jmol_colors[i.number] for i in atoms]
         block_legend = False
     elif isinstance(colors, str):
         colors = [colors] * len(atoms)
+        if noname:
+            save_path = save_path[:-4] + '-onecolor.gif'
     elif isinstance(colors, dict):
         colors_dict = colors.copy()
 
@@ -200,8 +214,11 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         colors = [colors_dict.get(i.symbol, jmol_colors[i.number])
                   for i in atoms]
         block_legend = False
+        customcolor = True
 
     elif type(colors) in [list, np.ndarray]:
+        if not use_charges:
+            customcolor = True
         # if values (ex charge), create Red Blue colormap
         try:
             float(colors[0])
@@ -229,9 +246,15 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
     # all atoms must be accounted for in colors list
     assert len(colors) == len(atoms)
 
+    # if custom colors were used (not charges) edit save_path
+    if noname and customcolor:
+            save_path = save_path[:-4] + '-customcolor.gif'
+
     # initialize plt figure and axis
     # add extra subplot if a colorbar or legend is needed
     if (colorbar and not block_colorbar) and not add_legend:
+        if not use_charges and noname:
+            save_path = save_path[:-4] + '-cbar.gif'
         fig, (ax, extra_ax) = plt.subplots(1, 2,
                                            gridspec_kw={'width_ratios': [30,
                                                                          1]},
@@ -320,7 +343,9 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                          bond_info, bonds=bonds,
                          bond_color=bond_color,
                          bond_edgecolor=bond_edgecolor)
-
+    # add nobonds to save_path is no path was given
+    elif noname:
+        save_path = save_path[:-4] + '-nobonds.gif'
     # add legend of atom types
     if add_legend:
         if block_legend:
@@ -330,6 +355,8 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
                 print('Cannot have colorbar and legend. '
                       'Only adding legend to gif')
 
+            if noname:
+                save_path = save_path[:-4] + '-leg.gif'
             # create an ordered, unique list of atom types
             all_symbols = atoms.get_chemical_symbols()
             symbols = sorted(set(all_symbols))
@@ -437,6 +464,14 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
             fig.canvas.draw()
         # hi Mike!!
 
+    # print rotation gif info
+    print('          Title: %s' % (os.path.basename(save_path)[:-4]))
+    print('      Loop time: %.2f s' % loop_time)
+    print('            FPS: %i' % fps)
+    print('   Total frames: %i' % frames)
+    print(' Building frame: ' + dig_str % 1, end='\r')
+
+    # build frames
     animation = anim.FuncAnimation(fig, next_step, frames=frames)
 
     # initialize imagemagick writer
@@ -446,8 +481,17 @@ def rot_gif(atoms, save_path, loop_time=8, fps=20, scale=0.7, add_bonds=True,
         # ImageMagick must be used
         raise ImportError("ImageMagick must be installed to create GIF")
 
+    # make sure file is not overwritten if <overwrite> = False
+    if not overwrite and os.path.isfile(save_path):
+        j = 1
+        save_path = save_path[:-4] + '-%i.gif' % j
+        while os.path.isfile(save_path):
+            save_path = save_path.replace('-%i.gif' % j,
+                                          '-%i.gif' % (j + 1))
+            j += 1
+
     # save gif
     animation.save(save_path, writer=writer, dpi=max_px / 5)
     plt.close()
     print(' ' * 50, end='\r')
-    print('saved rotation %s' % save_path[-3:])
+    print('saved rotation gif')
