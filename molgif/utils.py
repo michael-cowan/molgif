@@ -158,7 +158,8 @@ def draw_bonds(atoms, ax, radii, atomic_radii,
                 solid_capstyle='round')
 
 
-def get_fig_bounds(atoms, rot_axis='y', offset=2):
+def get_fig_bounds(atoms, rot_axis='y', square=False,
+                   offset=2):
     assert offset >= 0
     # max x and y dists for molecule
     # start by adding in offset
@@ -206,7 +207,9 @@ def get_fig_bounds(atoms, rot_axis='y', offset=2):
 
     # calculate figure size
     # make sure max side length is 5 inches
-    if height < width:
+    if square:
+        fig_size = (5, 5)
+    elif height < width:
         fig_size = (5, 5 * (height / width))
     else:
         fig_size = (5 * (width / height), 5)

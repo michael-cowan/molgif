@@ -27,7 +27,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
             center_data=True, colorbar=False, cb_range=None, cmap=cm.bwr_r,
             use_charges=False, max_px=600, direction='ccw', leg_order=None,
             legend_max_ms=20, labels=None, bond_color='white',
-            bond_edgecolor='k'):
+            bond_edgecolor='k', square=False, save_frames=False):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -42,92 +42,101 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                         to avoid overwriting
                         (Default: False)
     - loop_time (int): number of seconds for atoms to complete one rotation
-                        (Default: 8)
+                       (Default: 8)
     - fps (int): frames per second in animation
-                    (Default: 20)
+                 (Default: 20)
     - scale (float): scales size of atoms: scale * ase.data.covalent_radii
-                        (Default: 0.9)
+                     (Default: 0.9)
     - add_bonds (bool): if True, bonds are drawn
                         (Default: True)
     - auto_rotate (bool): if True, PCA is applied to coords to orient atoms
-                            such that max variance is in x-axis
-                            (Default: False)
+                          such that max variance is in x-axis
+                          (Default: False)
     - recenter (bool): if True, atoms are centered to origin
-                        based on avg. coord
-                        (Default: True)
+                       based on avg. coord
+                       (Default: True)
     - anchor (int): if given, atoms[anchor] will be set to the origin
                     so all other atoms rotate around it while it remains
                     stationary
                     (Default: None)
     - rot_axis (str): specify axis to rotate about
-                        - x (left-to-right), y (bot-to-top)
-                        - can be: 'y' | 'x' | 'z',
-                        - can also be '-x' to invert rotation
-                        (same as changing direction)
-                        (Default: 'y')
+                      - x (left-to-right), y (bot-to-top)
+                      - can be: 'y' | 'x' | 'z',
+                      - can also be '-x' to invert rotation
+                      (same as changing direction)
+                      (Default: 'y')
     - add_legend (bool): if True, a legend specifying atom types is added
-                            (Default: False)
+                         (Default: False)
     - colors (str | iterable | dict): specify atom colors with str, dict,
-                                        or values which will use the cmap
-                                - 'blue': all atoms blue
-                                - ['blue', 'white', ...]: label each atom
-                                - [0, 1.1, -2.3...]: cmap used to color
-                                - {'Au': 'purple'}: use dict to color by
-                                    by atom type - types not given use jmol
-                                (Default: None -> jmol colors used)
+                                      or values which will use the cmap
+                                      - 'blue': all atoms blue
+                                      - ['blue', 'white', ...]: label each atom
+                                      - [0, 1.1, -2.3...]: cmap used to color
+                                      - {'Au': 'purple'}: use dict to color by
+                                        by atom type - types not given use jmol
+                                      (Default: None -> jmol colors used)
     - center_data (bool): if True, colors are centered about middle of cmap
-                            - ensures (-) and (+) values are different color
-                            - ex) for RdBu cmap, 0 = 'white'
-                            (Default: True)
+                          - ensures (-) and (+) values are different color
+                          - ex) for RdBu cmap, 0 = 'white'
+                          (Default: True)
     - colorbar (bool): if True and colors given, a colorbar is added to gif
-                        (Default: False)
+                       (Default: False)
     - cb_range (tuple | list): (minval, maxval) will be used as colorbar
-                                range if given
-                                (Default: None)
+                               range if given
+                               (Default: None)
     - cmap (ColorMap): cmap to be used if colors is specified
-                        (Default: matplotlib.cm.bwr_r)
+                       (Default: matplotlib.cm.bwr_r)
     - use_charges (bool): if True, colored by initial_charges in atoms obj
-                            (Default: False)
+                          (Default: False)
     - max_px (int): sets pixel count for longest side
                     (Default: 600)
     - direction (str): direction for molecule to rotate
-                        - rot_axis='y': (looking down from the top)
-                        - rot_axis='x': (looking from the right)
-                        - rot_axis='z': (looking into screen)
-                        OPTIONS:
-                        - 'ccw': counterclockwise [left-to-right]
-                        - 'cw': clockwise [right-to-left]
-                        (Default: 'ccw')
+                       - rot_axis='y': (looking down from the top)
+                       - rot_axis='x': (looking from the right)
+                       - rot_axis='z': (looking into screen)
+                       OPTIONS:
+                       - 'ccw': counterclockwise [left-to-right]
+                       - 'cw': clockwise [right-to-left]
+                       (Default: 'ccw')
     - leg_order (list | str): if given, use it to order the legend
-                                - can also give str of single atom type
-                                - 'size': largest to smallest
-                                - 'size_r': smallest to largest
-                                (Default: None (alphabetical order))
+                              - can also give str of single atom type
+                              - 'size': largest to smallest
+                              - 'size_r': smallest to largest
+                              (Default: None (alphabetical order))
     - legend_max_ms (int): scales legend such that largest atom type
-                            is represented with markersize=<legend_max_ms>
-                            (Default: 20pts)
+                           is represented with markersize=<legend_max_ms>
+                           (Default: 20pts)
     - labels (str | iterable): type or list of labels to add to atoms
-                                - 'symbol': uses chemical symbol
-                                - 'colors': uses values from colors KArg
-                                - 'charge': uses initial_charges from atoms
-                                - [lab1, lab2, ...]
-                                (Default: None)
+                               - 'symbol': uses chemical symbol
+                               - 'colors': uses values from colors KArg
+                               - 'charge': uses initial_charges from atoms
+                               - [lab1, lab2, ...]
+                               (Default: None)
     - bond_color (str): specify color of bonds
                         (Default: white)
     - bond_edgecolor (str): specify edgecolor (border) of bonds
                             (Default: black)
+    - square (bool): if True, gif will be saved with square dimensions
+                     (Default: False)
+    - save_frames (bool): if True, folder is made and frames are saved as pngs
+                          - NOTE: gif will not be made if True
+                          (Default: False)
     """
     # if directory or nothing passed in, use chemical formula as name
     if os.path.isdir(save_path) or not save_path:
+        name = atoms.get_chemical_formula()
         noname = True
-        name = atoms.get_chemical_formula() + '.gif'
         save_path = os.path.join(save_path, name)
     else:
+        name = os.path.basename(save_path)
         noname = False
 
     # if save_path is not a gif, give it a gif extension
-    if not save_path.lower().endswith('.gif'):
-        save_path += '.gif'
+    if save_path.lower().endswith('.gif'):
+        save_path = save_path[:-4]
+
+    # get the directory path
+    dirpath = os.path.dirname(save_path)
 
     # total number of frames required
     frames = int(round(fps * loop_time))
@@ -153,7 +162,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     # color atoms based on charge
     if use_charges:
         if noname:
-            save_path = save_path[:-4] + '-charges.gif'
+            save_path = save_path + '-charges'
         colors = atoms.get_initial_charges().copy()
         colorbar = True
         add_legend = False
@@ -179,13 +188,14 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
         if isinstance(anchor, int) and 0 <= anchor <= len(atoms) - 1:
             atoms.positions -= atoms[anchor].position
             if noname:
-                save_path = save_path[:-4] + '-anchor.gif'
+                save_path = save_path + '-anchor'
         else:
             print('Invalid anchor argument was given and will be ignored')
 
     # calculate figure size
     # calculate axis limits (include offset as buffer)
-    fig_size, xlim, ylim = utils.get_fig_bounds(atoms, rot_axis=rot_axis)
+    fig_size, xlim, ylim = utils.get_fig_bounds(atoms, rot_axis=rot_axis,
+                                                square=square)
 
     # don't allow colorbar unless values given
     block_colorbar = True
@@ -200,7 +210,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     elif isinstance(colors, str):
         colors = [colors] * len(atoms)
         if noname:
-            save_path = save_path[:-4] + '-onecolor.gif'
+            save_path = save_path + '-onecolor'
     elif isinstance(colors, dict):
         colors_dict = colors.copy()
 
@@ -248,13 +258,13 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
 
     # if custom colors were used (not charges) edit save_path
     if noname and customcolor:
-            save_path = save_path[:-4] + '-customcolor.gif'
+            save_path = save_path + '-customcolor'
 
     # initialize plt figure and axis
     # add extra subplot if a colorbar or legend is needed
     if (colorbar and not block_colorbar) and not add_legend:
         if not use_charges and noname:
-            save_path = save_path[:-4] + '-cbar.gif'
+            save_path = save_path + '-cbar'
         fig, (ax, extra_ax) = plt.subplots(1, 2,
                                            gridspec_kw={'width_ratios': [30,
                                                                          1]},
@@ -345,7 +355,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                          bond_edgecolor=bond_edgecolor)
     # add nobonds to save_path is no path was given
     elif noname:
-        save_path = save_path[:-4] + '-nobonds.gif'
+        save_path = save_path + '-nobonds'
     # add legend of atom types
     if add_legend:
         if block_legend:
@@ -356,7 +366,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                       'Only adding legend to gif')
 
             if noname:
-                save_path = save_path[:-4] + '-leg.gif'
+                save_path = save_path + '-leg'
             # create an ordered, unique list of atom types
             all_symbols = atoms.get_chemical_symbols()
             symbols = sorted(set(all_symbols))
@@ -465,33 +475,50 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
         # hi Mike!!
 
     # print rotation gif info
-    print('          Title: %s' % (os.path.basename(save_path)[:-4]))
+    print('          Title: %s' % (os.path.basename(save_path)))
     print('      Loop time: %.2f s' % loop_time)
     print('            FPS: %i' % fps)
     print('   Total frames: %i' % frames)
     print(' Building frame: ' + dig_str % 1, end='\r')
 
-    # build frames
-    animation = anim.FuncAnimation(fig, next_step, frames=frames)
-
-    # initialize imagemagick writer
-    if anim.writers.is_available('imagemagick'):
-        writer = anim.ImageMagickWriter(fps=fps)
+    # only save png frames if <save_frames>
+    if save_frames:
+        runtype = 'frames'
+        frame_path = os.path.join(dirpath, name + '_frames')
+        # create 'frames' directory to save png frames
+        if not os.path.isdir(frame_path):
+            os.mkdir(frame_path)
+        for i in range(frames):
+            fig.savefig(os.path.join(frame_path, name + '_%03i.png' % (i + 1)),
+                        dpi=max_px / 5, transparent=True)
+            next_step(i)
     else:
-        # ImageMagick must be used
-        raise ImportError("ImageMagick must be installed to create GIF")
+        runtype = 'gif'
+        gif_path = save_path + '.gif'
 
-    # make sure file is not overwritten if <overwrite> = False
-    if not overwrite and os.path.isfile(save_path):
-        j = 1
-        save_path = save_path[:-4] + '-%i.gif' % j
-        while os.path.isfile(save_path):
-            save_path = save_path.replace('-%i.gif' % j,
-                                          '-%i.gif' % (j + 1))
-            j += 1
+        # build frames
+        animation = anim.FuncAnimation(fig, next_step, frames=frames)
 
-    # save gif
-    animation.save(save_path, writer=writer, dpi=max_px / 5)
+        # initialize imagemagick writer
+        if anim.writers.is_available('imagemagick'):
+            writer = anim.ImageMagickWriter(fps=fps)
+        else:
+            # ImageMagick must be used
+            raise ImportError("ImageMagick must be installed to create GIF")
+
+        # make sure file is not overwritten if <overwrite> = False
+        if not overwrite and os.path.isfile(gif_path):
+            j = 1
+            gif_path = gif_path[:-4] + '-%i.gif' % j
+            while os.path.isfile(gif_path):
+                gif_path = gif_path.replace('-%i.gif' % j,
+                                            '-%i.gif' % (j + 1))
+                j += 1
+
+        # save gif
+        animation.save(gif_path, writer=writer, dpi=max_px / 5)
+
+    # close figure and report completion
     plt.close()
     print(' ' * 50, end='\r')
-    print('saved rotation gif')
+    print('saved rotation %s' % runtype)
