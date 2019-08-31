@@ -603,11 +603,19 @@ class MolFig(object):
             self.drawn.remove('colorbar')
             self.fig.tight_layout()
 
-    def rotate(self, angle):
-        if self.rot_axis is None:
-            self.rot_axis = 'y'
-        self.atoms.rotate(angle, v=self.rot_axis)
-        self.update()
+    def rotate(self, angle, rot_axis=None):
+        if rot_axis is None:
+            if self.rot_axis is None:
+                rot_axis = 'y'
+            else:
+                rot_axis = self.rot_axis
+        try:
+            self.atoms.rotate(angle, v=rot_axis)
+            self.rot_axis = rot_axis
+            self.update()
+        except:
+            print("Unable to rotate - make sure angle "
+                  "and rot_axis (if given) are valid")
 
     def show(self):
         if isinstance(self.fig, plt.Figure):
@@ -626,7 +634,10 @@ class MolFig(object):
         self.draw(self.drawn, force=force)
 
 if __name__ == '__main__':
-    a = ase.build.molecule('C60')
+    a = ase.build.molecule('H2O')
     water = MolFig(a, square=True)
     water.draw()
+    print(water.rot_axis)
+    water.rotate(40, 'z')
+    print(water.rot_axis)
     plt.show()
