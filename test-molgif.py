@@ -4,20 +4,28 @@ import random
 import ase.build
 
 desk = os.path.join(os.path.expanduser('~'), 'Desktop')
+os.chdir(desk)
 
 # load in molecule (ase.Atoms object)
-molecule = ase.build.molecule('biphenyl')
+molecule = ase.build.molecule('C60')
 
 # pixels in largest dimension (width or height)
-max_px = 300
+max_px = 900
 
 """
 Use auto_rotate to find the best viewing angle
 """
+import ase.io
+
+path = 'C:\\Users\\mcowa\\Box Sync\\Michael_Cowan_PhD_research\\Papers\\02_au30_solubility\\solubility_paper_structures\\au25pet18_ROTATED.xyz'
+molecule = ase.io.read(path)
 
 # create rotating gif with rot_gif function
-molgif.rot_gif(molecule, max_px=max_px, auto_rotate=True)
+molgif.rot_gif(molecule, os.path.join(desk, 'NEW-AU25'), max_px=max_px, auto_rotate=False,
+               save_frames=False, optimize_gif=True, scale=0.8)
 
+import sys
+sys.exit()
 """
 Add a legend
 """
