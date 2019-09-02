@@ -6,7 +6,7 @@ create smooth gifs of rotating molecules
 
 ## Examples
 
-### Use auto_rotate to find the best viewing angle
+### Use smart_rotate to find the best viewing angle
 
     import molgif
     import ase.build
@@ -15,7 +15,7 @@ create smooth gifs of rotating molecules
     molecule = ase.build.molecule('biphenyl')
 
     # create rotating gif with rot_gif function
-    molgif.rot_gif(molecule, auto_rotate=True)
+    molgif.rot_gif(molecule, smart_rotate=True)
 
 ![biphenyl](gifs/biphenyl.gif)
 

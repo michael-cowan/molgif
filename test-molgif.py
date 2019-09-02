@@ -13,7 +13,7 @@ molecule = ase.build.molecule('C60')
 max_px = 900
 
 """
-Use auto_rotate to find the best viewing angle
+Use smart_rotate to find the best viewing angle
 """
 import ase.io
 
@@ -21,7 +21,7 @@ path = 'C:\\Users\\mcowa\\Box Sync\\Michael_Cowan_PhD_research\\Papers\\02_au30_
 molecule = ase.io.read(path)
 
 # create rotating gif with rot_gif function
-molgif.rot_gif(molecule, os.path.join(desk, 'NEW-AU25'), max_px=max_px, auto_rotate=False,
+molgif.rot_gif(molecule, os.path.join(desk, 'NEW-AU25'), max_px=max_px, smart_rotate=False,
                save_frames=False, optimize_gif=True, scale=0.8)
 
 import sys

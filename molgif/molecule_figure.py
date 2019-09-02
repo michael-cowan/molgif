@@ -2,21 +2,27 @@ from __future__ import division, print_function
 # TEMPORARY IMPORTS
 import utils
 import ase.build
+import ase.io
 # END
 # import molgif.utils as utils
+import os
+import io
+import subprocess
 import copy
 import ase
-from ase.data import covalent_radii
+from ase.data import covalent_radii, chemical_symbols
 from ase.data.colors import jmol_colors
 import numpy as np
+from PIL import Image
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import matplotlib.animation as anim
 
 
 class MolFig(object):
-    def __init__(self, atoms, scale=0.7, colors=None,
+    def __init__(self, atoms, scale=0.7, colors=None, name=None,
                  bond_color='white', bond_edgecolor='black',
                  labels=None, cb_min=None, cb_max=None, center_data=False,
                  cmap=cm.bwr_r, square=False, rot_axis=None):
@@ -25,7 +31,7 @@ class MolFig(object):
         self.fig_params = []
 
         # track what has been drawn
-        self.drawn = []
+        self._drawn = []
 
         # figure and axis objects
         self.fig = None
@@ -41,6 +47,9 @@ class MolFig(object):
         # rotation axis (if needed)
         self.rot_axis = rot_axis
 
+        # padding around atoms
+        self.padding = None
+
         # position transformation matrix
         # default to no transformation
         self.transform = np.eye(3)
@@ -51,8 +60,16 @@ class MolFig(object):
         # set atoms object
         if isinstance(atoms, ase.Atoms):
             self.atoms = atoms
+            # center atoms to COP
+            self.atoms.positions -= self.atoms.positions.mean(0)
         else:
             raise ValueError("must pass in valid ase.Atoms object")
+
+        # set name
+        self.name = name
+        # default name is chemical formula
+        if self.name is None:
+            self.name = self.atoms.get_chemical_formula()
 
         # track atom objects (track for redrawing atoms and bonds)
         self.pos = self.atoms.positions.copy()
@@ -83,13 +100,16 @@ class MolFig(object):
         self.cmap = cmap
         self.cb_min = cb_min
         self.cb_max = cb_max
+        # store values passed into colors prop
+        self._cb_values = None
         # normalize distribution of colors
         self.cb_norm = None
         # center colorbar data
         self.center_data = center_data
 
         # labels (write text on atoms)
-        self.labels = labels
+        self._labels = None
+        self.__check_labels__(labels)
 
         # legend attributes (track order)
         self.legend = None
@@ -135,6 +155,25 @@ class MolFig(object):
     def colors(self, value):
         self.__check_colors__(value)
 
+    # labels getter
+    @property
+    def labels(self):
+        return self._labels
+
+    @labels.setter
+    def labels(self, value):
+        self.__check_labels__(value)
+
+    # tracks items that have been drawn
+    @property
+    def drawn(self):
+        return self._drawn
+
+    # drawn is read only
+    @drawn.setter
+    def drawn(self, value):
+        print('Not allowed to edit drawn list.')
+
     def __check_colors__(self, value):
         # track to see if colors have changed
         old_colors = copy.deepcopy(self._colors)
@@ -160,11 +199,11 @@ class MolFig(object):
             except ValueError:
                 pass
         elif isinstance(value, dict):
-            colors_dict = value.copy()
+            colors_dict = {k.title(): value[k] for k in value.copy()}
 
             # find atom types that are not in atoms object
             not_found = [c for c in colors_dict
-                         if c not in self.atoms.symbols]
+                         if c.title() not in self.atoms.symbols]
             if not_found:
                 print('%s do not match atom types.' % (', '.join(not_found)))
 
@@ -201,6 +240,9 @@ class MolFig(object):
                                                 vmin=minval,
                                                 vmax=maxval)
 
+                # save original values
+                self._cb_values = value.copy()
+
                 # create color map
                 self._colors = [self.cmap(self.cb_norm(t))
                                 for t in value]
@@ -233,53 +275,59 @@ class MolFig(object):
         if len(self._colors) != len(self.atoms):
             raise ValueError("length of colors must be equal to # atoms")
 
-        # redraw everything if colors have changed
-        if self._colors != old_colors:
-            self.update(force=True)
+        # redraw atoms if colors have changed
+        if self._colors != old_colors and 'atoms' in self._drawn:
+            self.draw_atoms(force=True)
 
-    def smart_rotate(self):
-        new_pos, self.transform = utils.pca(self.atoms.positions,
-                                            return_transform=True)
-        self.atoms.positions = new_pos
+    def __check_labels__(self, value):
+        # track to see if labels change
+        old_labels = copy.deepcopy(self._labels)
 
-        # reinitialize figure to rescale
-        self.init_fig()
-
-        # redraw objects
-        self.update(force=True)
-
-    def check_labels(self):
         # see if labels passed in
-        if self.labels is not None:
-            if isinstance(self.labels, str):
-                self.labels = self.labels.lower()
-                if self.labels == 'symbols':
-                    self.labels = self.atoms.get_chemical_symbols()
-                elif self.labels == 'colors':
-                    self.labels = self._colors.copy()
-                elif self.labels == 'charges':
-                    self.labels = self.atoms.get_initial_charges()
+        if value is not None:
+            if isinstance(value, str):
+                value = value.lower()
+                # atomic symbols
+                if value == 'symbols':
+                    self._labels = list(self.atoms.get_chemical_symbols())
+                # atomic symbols excluding H
+                elif value == 'symbols-noh':
+                    self._labels = [a.symbol if a.symbol != 'H' else ''
+                                    for a in self.atoms]
+                # colorbar values
+                elif value == 'values' and not self.block_colorbar:
+                    self._labels = list(self._cb_values)
+                # atomic charges
+                elif value == 'charges':
+                    self._labels = list(self.atoms.get_initial_charges())
                 else:
-                    print('"%s" not supported for labels' % self.labels)
+                    print('"%s" not supported for labels' % value)
+            elif len(value) == len(self.atoms):
+                self._labels = list(value)
             else:
-                try:
-                    assert len(self.labels) == len(self.atoms)
-                except:
-                    print('Warning: Invalid input of labels.')
-                    self.labels = None
+                print('Warning: Invalid input of labels.')
+                self._labels = None
 
-    def init_fig(self):
+        # redraw atoms if labels have changed
+        if self._labels != old_labels and 'atoms' in self._drawn:
+            self.draw_atoms(force=True)
+
+    def init_fig(self, padding=1):
         """
         Create initial figure and axis objects
         - determines figure size and axis limits
         - also makes colorbar axis if needed
         """
+        if self.padding is None:
+            self.padding = padding
+
         # calculate figure size
         # calculate axis limits (include offset as buffer)
         self.fig_size, self.xlim, self.ylim = utils.get_fig_bounds(
                                                         self.atoms,
                                                         rot_axis=self.rot_axis,
-                                                        square=self.square)
+                                                        square=self.square,
+                                                        padding=self.padding)
 
         # create figure and main axis
         if not isinstance(self.fig, plt.Figure):
@@ -300,19 +348,28 @@ class MolFig(object):
         # set aspect ratio to 1
         self.ax.set_aspect(1)
 
-    def draw(self, items=['atoms', 'bonds'], force=False):
+    def clear_figure(self):
+        """
+        Removes everything from figure
+        same as remove('all')
+        """
+        self.remove('all')
+
+    def draw(self, items=['atoms', 'bonds', 'labels'], force=False):
         """
         Draws multiple object types at once
+        - Default: draws atoms, bonds, and labels (if any specified)
 
         KArgs:
         - items (list): list of object types to draw (as str)
                         OPTIONS:
                         - atoms
                         - bonds
+                        - labels
                         - legend
                         - colorbar
         """
-        for item in items.copy():
+        for item in items:
             method = 'draw_' + item
             if method in self.__dir__():
                 getattr(self, method)(force=force)
@@ -341,7 +398,7 @@ class MolFig(object):
         for i, a in enumerate(self.atoms):
             # update atom objects
             if update:
-                self.atom_objs[i].set_facecolor(self.colors[i])
+                self.atom_objs[i].set_facecolor(self._colors[i])
                 self.atom_objs[i].center = (a.x, a.y)
                 self.atom_objs[i].zorder = a.z
             # create atom object patches
@@ -357,21 +414,9 @@ class MolFig(object):
                 self.atom_objs.append(circ)
                 self.ax.add_artist(circ)
 
-            # add element labels (excluding H)
-            if self.labels is not None and a.symbol != 'H':
-                ann = ax.annotate(
-                            labels[i],
-                            (a.x, a.y),
-                            zorder=a.z + 0.001,
-                            ha='center',
-                            va='center',
-                            fontsize=7)
-                # add annotation to label_objs list
-                self.label_objs[i] = ann
-
         # add atoms to list of drawn items
-        if 'atoms' not in self.drawn:
-            self.drawn.append('atoms')
+        if 'atoms' not in self._drawn:
+            self._drawn.append('atoms')
 
         self.fig.tight_layout()
 
@@ -465,22 +510,51 @@ class MolFig(object):
             self.bond_objs = self.ax.lines
 
         # add bonds to list of drawn items
-        if 'bonds' not in self.drawn:
-            self.drawn.append('bonds')
+        if 'bonds' not in self._drawn:
+            self._drawn.append('bonds')
 
-    def draw_legend(self, leg_order=None, legend_max_ms=20, force=False):
+    def draw_labels(self, labels=None, force=False):
+        # can pass in new label types when calling draw_labels
+        if labels is not None:
+            self.__check_labels__(labels)
+
+        # determine if drawing or updating
+        update_labels = bool(len(self.label_objs))
+
+        if self.labels is not None:
+            for i, a in enumerate(self.atoms):
+                if update_labels:
+                    self.label_objs[i].set_text(self._labels[i])
+                    self.label_objs[i].set_x(a.x)
+                    self.label_objs[i].set_y(a.y)
+                    self.label_objs[i].set_zorder(a.z + 0.001)
+                else:
+                    ann = self.ax.annotate(
+                                self._labels[i],
+                                (a.x, a.y),
+                                zorder=a.z + 0.001,
+                                ha='center',
+                                va='center',
+                                fontsize=15)
+                    # add annotation to label_objs list
+                    self.label_objs.append(ann)
+
+        if 'labels' not in self._drawn:
+            self._drawn.append('labels')
+
+    def draw_legend(self, leg_order=None, max_ms=16, force=False):
         if self.block_legend:
             print("Warning: Cannot add legend unless atoms "
                   "are colored by type.")
-            if 'legend' in self.drawn:
+            if 'legend' in self._drawn:
                 self.remove_legend()
             return
 
         # return if legend is already drawn
-        if 'legend' in self.drawn:
+        if 'legend' in self._drawn:
             # redraw legend if different leg_order
             if isinstance(leg_order, str) and leg_order != self.leg_order:
-                self.drawn.remove('legend')
+                self._drawn.remove('legend')
             elif not force:
                 return
 
@@ -524,8 +598,8 @@ class MolFig(object):
                           for a in a_objs])
 
         # normalize sizes such that largest atom
-        # has size of <legend_max_ms>
-        sizes = sizes * (legend_max_ms / sizes.max())
+        # has size of <max_ms>
+        sizes = sizes * (max_ms / sizes.max())
 
         # create legend objects
         leg = [Line2D([0], [0], marker='o', ls='',
@@ -556,19 +630,19 @@ class MolFig(object):
         self.fig.tight_layout()
 
         # add legend to list of drawn items
-        if 'legend' not in self.drawn:
-            self.drawn.append('legend')
+        if 'legend' not in self._drawn:
+            self._drawn.append('legend')
 
     def draw_colorbar(self, force=False):
         if self.block_colorbar:
             print("Warning: Unable to draw colorbar - "
                   "values needed in place of colors")
-            if 'colorbar' in self.drawn:
+            if 'colorbar' in self._drawn:
                 self.remove_colorbar()
             return
 
         # do not redraw colorbar
-        if 'colorbar' in self.drawn and not force:
+        if 'colorbar' in self._drawn and not force:
             return
 
         # add in colorbar axis
@@ -586,22 +660,106 @@ class MolFig(object):
         self.fig.tight_layout()
 
         # add colorbar to list of drawn items
-        if 'colorbar' not in self.drawn:
-            self.drawn.append('colorbar')
+        if 'colorbar' not in self._drawn:
+            self._drawn.append('colorbar')
+
+    def remove(self, items=['atoms', 'bonds', 'labels']):
+        """
+        Removes multiple object types at once
+        - Default: removes atoms, bonds, and labels (if any specified)
+
+        KArgs:
+        - items (list): list of object types to remove (as str)
+                        items='all' will remove everything
+                        OPTIONS:
+                        - atoms
+                        - bonds
+                        - labels
+                        - legend
+                        - colorbar
+        """
+        if items == 'all':
+            items = self._drawn.copy()
+        for item in items:
+            method = 'remove_' + item
+            if method in self.__dir__():
+                getattr(self, method)()
+
+    def remove_atoms(self):
+        if 'atoms' in self._drawn:
+            for a in self.atom_objs[::-1]:
+                a.remove()
+            self.atom_objs = []
+            self._drawn.remove('atoms')
+
+    def remove_bonds(self):
+        if 'bonds' in self._drawn:
+            for b in self.bond_objs[::-1]:
+                b.remove()
+            self._drawn.remove('bonds')
+
+    def remove_labels(self):
+        if 'labels' in self._drawn:
+            for lab in self.label_objs[::-1]:
+                lab.remove()
+            self.label_objs = []
+            self._drawn.remove('labels')
 
     def remove_legend(self):
         if self.legend is not None:
             self.legend.remove()
             self.legend = None
-            self.drawn.remove('legend')
+            self._drawn.remove('legend')
             self.fig.tight_layout()
 
     def remove_colorbar(self):
         if isinstance(self.cb_ax, plt.Axes):
             self.fig.delaxes(self.cb_ax)
             self.cb_ax = None
-            self.drawn.remove('colorbar')
+            self._drawn.remove('colorbar')
             self.fig.tight_layout()
+
+    def smart_rotate(self):
+        new_pos, self.transform = utils.pca(self.atoms.positions,
+                                            return_transform=True)
+        self.atoms.positions = new_pos
+
+        # reinitialize figure to rescale
+        self.init_fig()
+
+        # redraw objects
+        self.update(force=True)
+
+    def add_param(self, value):
+        if value not in self.fig_params:
+            self.fig_params.append(value)
+
+    def adjust_padding(self, padding):
+        self.init_fig(padding)
+        self.update(force=True)
+
+    def anchor(self, i):
+        """
+        Translates atoms[<i>] to origin
+        - <i> can also be cartesian coordinates
+
+        Args:
+        - i (int): index of atom that should be translated to origin
+        - i (list): cartesian coordinates that should be translated to origin
+        """
+        try:
+            if len(i) == 3:
+                self.atoms.positions -= list(i)
+            else:
+                raise ValueError('not cartesian coordinates')
+        except:
+            if 0 <= i < len(self):
+                self.atoms.positions -= self.atoms[i].position
+                # recalculate axis boundaries
+                self.init_fig()
+                self.add_param('anchor')
+            else:
+                print('Invalid index given to anchor')
 
     def rotate(self, angle, rot_axis=None):
         if rot_axis is None:
@@ -623,21 +781,137 @@ class MolFig(object):
         else:
             raise TypeError('init_fig must first be called')
 
-    def save(self, path, **kwargs):
-        self.fig.savefig(path, **kwargs)
+    def save(self, path=None, overwrite=False, max_px=600, transparent=False):
+        dpi = max_px / 5
+
+        if path is None:
+            path = '%s-%s.png' % (self.atoms.get_chemical_formula(),
+                                  '-'.join(self.fig_params))
+
+        if not overwrite:
+            path = utils.avoid_overwrite(path)
+
+        if path.endswith('.png'):
+            ram = io.BytesIO()
+            self.fig.savefig(ram, format='png', dpi=dpi,
+                             transparent=transparent)
+            ram.seek(0)
+            im = Image.open(ram)
+
+            # scale number of unique colors in png with number of atom types
+            ncolors = self.atom_types + 15
+
+            im2 = im.convert('P', palette=Image.ADAPTIVE, colors=ncolors)
+
+            im2.save(path, optimize=True)
+        else:
+            self.fig.savefig(path, transparent=transparent, dpi=dpi)
 
     def update(self, force=False, recalc_bonds=None):
         if isinstance(recalc_bonds, bool):
             self.recalc_bonds = recalc_bonds
 
         # call all draw methods
-        self.draw(self.drawn, force=force)
+        self.draw(self._drawn, force=force)
+
+    def rot_gif(self, path=None, fps=20, loop_time=6,
+                max_px=600, rot_axis='y', save_frames=False, overwrite=False,
+                optimize_gif=False):
+        if path is None:
+            path = 'C:\\users\\mcowa\\desktop\\test.gif'
+
+        # ensure path ends with .gif
+        if not path.endswith('.gif'):
+            path += '.gif'
+
+        # avoid overwriting previous gif
+        if not overwrite:
+            path = utils.avoid_overwrite(path)
+
+        # save frames in *_frames folder
+        if save_frames or optimize_gif:
+            frame_path = os.path.join(
+                            os.path.dirname(path),
+                            os.path.basename(path).strip('.gif')) + '_frames'
+
+            # avoid overwriting previous frame_path
+            frame_path = utils.avoid_overwrite_dir(frame_path)
+            os.mkdir(frame_path)
+
+            # total number of frames
+            frames = fps * loop_time
+
+            # angle to rotate between frames (in degrees)
+            rot = 360 / frames
+
+            # iteratively save all frames
+            print(' ' * 50, end='\r')
+            for i in range(frames):
+                print(' Saving frame %03i' % (i + 1), end='\r')
+                self.save(os.path.join(frame_path,
+                                       self.name + '_%03i.png' % (i + 1)))
+                self.rotate(rot)
+        # else make gif with matplotlib.animation and image magick
+        else:
+            animation = self.rot_animation(fps=fps, loop_time=loop_time,
+                                           rot_axis=rot_axis, gif=True)
+
+            # initialize imagemagick writer
+            if anim.writers.is_available('imagemagick'):
+                writer = anim.ImageMagickWriter(fps=fps)
+            else:
+                # ImageMagick must be used
+                raise ImportError("ImageMagick must be installed "
+                                  "to create GIF")
+
+            # save gif
+            animation.save(path, writer=writer, dpi=max_px / 5)
+
+        if optimize_gif:
+            print(' Creating optimized gif...', end='\r')
+            subprocess.call(['magick', 'convert', '-delay', str(100 / fps),
+                             os.path.join(frame_path, '*.png'), path])
+
+            # delete frames
+            for f in os.listdir(frame_path):
+                os.remove(os.path.join(frame_path, f))
+            os.removedirs(frame_path)
+
+    def rot_animation(self, fps=20, loop_time=6, rot_axis='y', gif=False):
+        frames = fps * loop_time
+        rot = 360 / frames
+        dig_str = '%0{}i'.format(len(str(frames)))
+
+        # adjust axis limits based on rot_axis
+        self.rot_axis = rot_axis
+        self.init_fig()
+        self.update(force=True)
+        self.fig.tight_layout()
+
+        def next_step(i):
+            # print out progress if building gif
+            if gif:
+                print(' ' * 50, end='\r')
+                if (i + 1) == frames:
+                    print(' Wrapping things up..', end='\r')
+                else:
+                    print(' Building frame: ' + dig_str % (i + 2), end='\r')
+
+            # rotate atoms
+            self.rotate(rot, rot_axis)
+
+        # build frames
+        animation = anim.FuncAnimation(self.fig,
+                                       next_step,
+                                       frames=frames,
+                                       interval=100/fps)
+        return animation
 
 if __name__ == '__main__':
-    a = ase.build.molecule('H2O')
-    water = MolFig(a, square=True)
-    water.draw()
-    print(water.rot_axis)
-    water.rotate(40, 'z')
-    print(water.rot_axis)
+    path = 'C:\\users\\mcowa\\desktop\\autu2oct_cn.xyz'
+    # a = ase.io.read(path)
+    a = ase.build.molecule('C60')
+    molecule = MolFig(a)
+    molecule.draw()
+    # animation = molecule.rot_gif(optimize_gif=True)
     plt.show()

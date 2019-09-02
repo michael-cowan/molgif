@@ -33,6 +33,9 @@ def avoid_overwrite(path):
     Args:
     path (str): path to modify
 
+    Returns:
+    (str): modified (if needed) save path
+
     Raises:
     ValueError: raised if an extension is not present in path
     """
@@ -58,6 +61,21 @@ def avoid_overwrite(path):
                                     '-%i.%s' % (j + 1, ext))
         j += 1
     return new_path
+
+
+def avoid_overwrite_dir(dirpath):
+    """
+    Avoid overwriting directories
+    """
+    if not os.path.isdir(dirpath):
+        return dirpath
+    else:
+        i = 1
+        dirpath = dirpath + '-1'
+        while os.path.isdir(dirpath):
+            dirpath = dirpath.strip('-%i' % i) + '-%i' % (i + 1)
+            i += 1
+        return dirpath
 
 
 def get_bonds(atoms, radii, scale=1.25):
@@ -108,14 +126,14 @@ def get_bonds(atoms, radii, scale=1.25):
 
 
 def get_fig_bounds(atoms, rot_axis=None, square=False,
-                   offset=2):
-    assert offset >= 0
+                   padding=1):
+    assert padding >= 0
     # max x and y dists for molecule
-    # start by adding in offset
-    minx = -offset
-    maxx = offset
-    miny = -offset
-    maxy = offset
+    # start by adding in padding
+    minx = -padding
+    maxx = padding
+    miny = -padding
+    maxy = padding
 
     # only buffer based on initial perspective
     if rot_axis is None:
