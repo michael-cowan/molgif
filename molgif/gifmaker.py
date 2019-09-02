@@ -1,19 +1,14 @@
 from __future__ import division, print_function
 # import molgif.utils as utils
+# from molgif.molecule_figure import MolFig
 import utils
+from molecule_figure import MolFig
 import os
 import sys
 import re
 import subprocess
 import platform
-import io
-from PIL import Image
-import ase
-from ase.data import covalent_radii, chemical_symbols
-from ase.data.colors import jmol_colors
-import numpy as np
-import matplotlib
-from matplotlib.lines import Line2D
+import ase.io
 import matplotlib.cm as cm
 import matplotlib.animation as anim
 import matplotlib.pyplot as plt
@@ -25,282 +20,14 @@ if platform.system().lower().startswith('windows'):
         anim.rcParams['animation.convert_path'] = 'magick'
 
 
-def build_initial_figure(atoms, scale=0.7, add_bonds=True, bond_color='white',
-                         bond_edgecolor='k', colors=None, colorbar=False,
-                         add_legend=False, leg_order=None, use_charges=False,
-                         square=False, labels=None, save_path='',
-                         noname=True, rot_axis=None, return_all=False):
-    """
-    Creates matplotlib figure with initial structure
-
-    KArgs:
-    return_all (bool): set True to pass out all required params for rot_gif
-                       and traj_gif functions
-                       - if False, only returns figure and axis objects
-                       (Default: False)
-    """
-    # calculate figure size
-    # calculate axis limits (include offset as buffer)
-    fig_size, xlim, ylim = utils.get_fig_bounds(atoms, rot_axis=rot_axis,
-                                                square=square)
-
-    # don't allow colorbar unless values given
-    block_colorbar = True
-
-    # don't allow legend if atoms are not colored by type
-    block_legend = True
-
-    customcolor = False
-    if colors is None:
-        colors = [jmol_colors[i.number] for i in atoms]
-        block_legend = False
-    elif isinstance(colors, str):
-        colors = [colors] * len(atoms)
-        if noname:
-            save_path = save_path + '-onecolor'
-    elif isinstance(colors, dict):
-        colors_dict = colors.copy()
-
-        not_found = []
-        symbols = set(atoms.get_chemical_symbols())
-        not_found = [c for c in colors_dict if c not in symbols]
-        if not_found:
-            print('%s do not match atom types.' % (', '.join(not_found)))
-
-        # use combination of color_dict and jmol_colors
-        colors = [colors_dict.get(i.symbol, jmol_colors[i.number])
-                  for i in atoms]
-        block_legend = False
-        customcolor = True
-
-    elif type(colors) in [list, np.ndarray]:
-        if not use_charges:
-            customcolor = True
-        # if values (ex charge), create Red Blue colormap
-        try:
-            float(colors[0])
-
-            # use cb_range if given
-            if cb_range is not None and len(cb_range) == 2:
-                minval, maxval = cb_range
-            # if center_data, ensure mid color is 0
-            elif center_data:
-                maxval = max(abs(colors))
-                minval = -maxval
-            else:
-                maxval = max(temp)
-                minval = min(temp)
-
-            norm = mcolors.Normalize(vmin=minval, vmax=maxval)
-
-            # create color map
-            colors = [cmap(norm(t)) for t in colors]
-            block_colorbar = False
-        # else move on to the assertion
-        except:
-            pass
-
-    # all atoms must be accounted for in colors list
-    assert len(colors) == len(atoms)
-
-    # if custom colors were used (not charges) edit save_path
-    if noname and customcolor:
-            save_path = save_path + '-customcolor'
-
-    # initialize plt figure and axis
-    # add extra subplot if a colorbar or legend is needed
-    if (colorbar and not block_colorbar) and not add_legend:
-        if not use_charges and noname:
-            save_path = save_path + '-cbar'
-        fig, (ax, extra_ax) = plt.subplots(1, 2,
-                                           gridspec_kw={'width_ratios': [30,
-                                                                         1]},
-                                           figsize=fig_size)
-        fig.subplots_adjust(wspace=0, hspace=0)
-
-    # make single subplot
-    else:
-        fig, ax = plt.subplots(figsize=fig_size)
-        if colorbar:
-            print('No data given for colorbar!')
-
-    # set axis limits (include offset as buffer)
-    ax.set_xlim(xlim)
-    ax.set_ylim(ylim)
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.axis('off')
-
-    # set aspect ratio to 1
-    ax.set_aspect(1.)
-
-    # see if labels passed in
-    if labels is not None:
-        if isinstance(labels, str):
-            if labels.lower() in ['symbol', 'symbols']:
-                labels = atoms.get_chemical_symbols()
-            elif labels.lower() in ['color', 'colors']:
-                labels = colors.copy()
-            elif labels.lower() in ['charge', 'charges']:
-                labels = atoms.get_initial_charges()
-            elif labels.lower() == 'none':
-                labels = None
-            else:
-                print('"%s" not supported for labels' % labels)
-        else:
-            try:
-                assert len(labels) == len(atoms)
-            except:
-                print('invalid input of labels.')
-                labels = None
-
-    # create atom patches and add to ax
-    borderwidth = 0.05  # angstroms
-    patches = []
-    annotations = []
-    for i, a in enumerate(atoms):
-        circ = plt.Circle((a.x, a.y),
-                          radius=covalent_radii[a.number] * scale,
-                          facecolor=colors[i],
-                          edgecolor='k',
-                          linewidth=utils.angstrom_to_axunits(borderwidth, ax),
-                          zorder=a.z)
-        patches.append(circ)
-        ax.add_artist(circ)
-
-        # add element labels (excluding H)
-        if labels is not None and a.symbol != 'H':
-            ann = ax.annotate(labels[i], (a.x, a.y),
-                              zorder=a.z + 0.001,
-                              ha='center',
-                              va='center',
-                              fontsize=7)
-        else:
-            ann = None
-        annotations.append(ann)
-
-    # draw initial bonds
-    if add_bonds:
-        # can not be a variable until bond ends can be properly scaled
-        ang_bond_width = 0.25  # Angstrom
-
-        # calculate bond width info relative to axis units
-        bond_width_scaled = utils.angstrom_to_axunits(ang_bond_width, ax)
-
-        # use same borderwidth as atoms
-        bond_fill_scaled = utils.angstrom_to_axunits(
-            ang_bond_width - 2 * borderwidth, ax)
-
-        bond_info = (bond_width_scaled, bond_fill_scaled)
-
-        radii = np.array([covalent_radii[i.number] for i in atoms])
-        atomic_radii = radii * scale
-        bonds = utils.get_bonds(atoms, radii)
-        utils.draw_bonds(atoms, ax, radii, atomic_radii,
-                         bond_info, bonds=bonds,
-                         bond_color=bond_color,
-                         bond_edgecolor=bond_edgecolor)
-    # add nobonds to save_path is no path was given
-    elif noname:
-        save_path = save_path + '-nobonds'
-    # add legend of atom types
-    if add_legend:
-        if block_legend:
-            print('Cannot add legend unless atoms are colored by type.')
-        else:
-            if colorbar:
-                print('Cannot have colorbar and legend. '
-                      'Only adding legend to gif')
-
-            if noname:
-                save_path = save_path + '-leg'
-            # create an ordered, unique list of atom types
-            all_symbols = atoms.get_chemical_symbols()
-            symbols = sorted(set(all_symbols))
-
-            # use custom legend order if given
-            if isinstance(leg_order, str):
-                # order legend by size
-                if leg_order in ['size', 'size_r']:
-                    reverse = True if leg_order == 'size' else False
-                    leg_order = sorted(
-                        symbols,
-                        key=lambda z: list(covalent_radii)[
-                            chemical_symbols.index(z)],
-                        reverse=reverse)
-                else:
-                    leg_order = [leg_order]
-            if isinstance(leg_order, list) or isinstance(leg_order,
-                                                         np.ndarray):
-                # any types not in leg_order will be appended in
-                # alphabetical order
-                leg_order = list(leg_order) + [s for s in symbols
-                                               if s not in leg_order]
-
-                symbols = sorted(symbols, key=lambda z: leg_order.index(z))
-
-            # get an atom object of each type
-            a_objs = [atoms[all_symbols.index(s)] for s in symbols]
-
-            # calculate sizes of each atom
-            sizes = np.array([utils.angstrom_to_axunits(
-                              covalent_radii[a.number] * scale, ax) * 2
-                              for a in a_objs])
-
-            # normalize sizes such that largest atom
-            # has size of <legend_max_ms>
-            sizes = sizes * (legend_max_ms / sizes.max())
-
-            # create legend objects
-            leg = [Line2D([0], [0], marker='o', ls='',
-                          markerfacecolor=colors[a.index],
-                          markeredgecolor='k',
-                          markersize=ms)
-                   for a, ms in zip(a_objs, sizes)]
-
-            # create legend
-            ax.legend(
-                leg,
-                symbols,
-                frameon=False,
-                prop=dict(size=11, weight='bold'),
-                handletextpad=np.sqrt(utils.angstrom_to_axunits(0.01, ax)),
-                borderpad=0,
-                borderaxespad=0,
-                columnspacing=0,
-                markerscale=1,
-                labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08, ax)),
-                loc='center left',
-                framealpha=0,
-                # up to ten atom types per column
-                ncol=(len(leg) // 10) + 1,
-                bbox_to_anchor=(1, 0.5))
-
-    # add colorbar
-    elif colorbar and not block_colorbar:
-        cb = matplotlib.colorbar.ColorbarBase(extra_ax, cmap=cmap,
-                                              norm=norm)
-        # set font size
-        cb.ax.tick_params(labelsize=11)
-
-    # call tight_layout
-    fig.tight_layout()
-
-    if return_all:
-        return (fig, ax, save_path, bonds, patches, annotations,
-                radii, atomic_radii, bond_info)
-    else:
-        return fig, ax
-
-
 def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
-            scale=0.7, add_bonds=True, auto_rotate=False, recenter=True,
-            anchor=None, rot_axis='y', add_legend=False, colors=None,
-            center_data=True, colorbar=False, cb_range=None, cmap=cm.bwr_r,
-            use_charges=False, max_px=600, direction='ccw', leg_order=None,
-            legend_max_ms=20, labels=None, bond_color='white',
+            scale=0.7, draw_bonds=True, smart_rotate=False,
+            anchor=None, rot_axis='y', draw_legend=False, colors=None,
+            center_data=True, draw_colorbar=False, cb_range=[None, None],
+            cmap=cm.bwr_r, use_charges=False, max_px=600,
+            leg_order=None, legend_max_ms=20, labels=None, bond_color='white',
             bond_edgecolor='k', square=False, save_frames=False,
-            optimize_gif=False):
+            optimize_gif=False, transparent=False):
     """
     Creates a rotating animation .gif of ase.Atoms object
 
@@ -321,14 +48,11 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                  (Default: 20)
     - scale (float): scales size of atoms: scale * ase.data.covalent_radii
                      (Default: 0.9)
-    - add_bonds (bool): if True, bonds are drawn
+    - draw_bonds (bool): if True, bonds are drawn
                         (Default: True)
-    - auto_rotate (bool): if True, PCA is applied to coords to orient atoms
-                          such that max variance is in x-axis
-                          (Default: False)
-    - recenter (bool): if True, atoms are centered to origin
-                       based on avg. coord
-                       (Default: True)
+    - smart_rotate (bool): if True, PCA is applied to coords to orient atoms
+                           such that max variance is in x-axis
+                           (Default: False)
     - anchor (int): if given, atoms[anchor] will be set to the origin
                     so all other atoms rotate around it while it remains
                     stationary
@@ -336,10 +60,9 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     - rot_axis (str): specify axis to rotate about
                       - x (left-to-right), y (bot-to-top)
                       - can be: 'y' | 'x' | 'z',
-                      - can also be '-x' to invert rotation
-                      (same as changing direction)
+                      - can also be '-' to change direction!
                       (Default: 'y')
-    - add_legend (bool): if True, a legend specifying atom types is added
+    - draw_legend (bool): if True, a legend specifying atom types is added
                          (Default: False)
     - colors (str | iterable | dict): specify atom colors with str, dict,
                                       or values which will use the cmap
@@ -353,7 +76,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                           - ensures (-) and (+) values are different color
                           - ex) for RdBu cmap, 0 = 'white'
                           (Default: True)
-    - colorbar (bool): if True and colors given, a colorbar is added to gif
+    - draw_colorbar (bool): if True and colors given, a colorbar is added to gif
                        (Default: False)
     - cb_range (tuple | list): (minval, maxval) will be used as colorbar
                                range if given
@@ -364,14 +87,6 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                           (Default: False)
     - max_px (int): sets pixel count for longest side
                     (Default: 600)
-    - direction (str): direction for molecule to rotate
-                       - rot_axis='y': (looking down from the top)
-                       - rot_axis='x': (looking from the right)
-                       - rot_axis='z': (looking into screen)
-                       OPTIONS:
-                       - 'ccw': counterclockwise [left-to-right]
-                       - 'cw': clockwise [right-to-left]
-                       (Default: 'ccw')
     - leg_order (list | str): if given, use it to order the legend
                               - can also give str of single atom type
                               - 'size': largest to smallest
@@ -399,6 +114,8 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
                            - experimental; still needs additional testing
                            - NOTE: gif takes much longer to make
                            (Default: False)
+    - transparent (bool): if True, frames are saved as transparent images
+                          (Defulat: True)
     """
     # is atoms is str, read in atoms object
     if isinstance(atoms, str):
@@ -438,64 +155,39 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     if not re.match('-?[xyz]', rot_axis):
         raise ValueError('Invalid rot_axis given')
 
-    # negate rotation angle if clockwise is specified
-    if direction == 'cw':
-        rot *= -1
-    elif direction != 'ccw':
-        print('Incorrect rotation specified - using counterclockwise (ccw)')
-
     # color atoms based on charge
     if use_charges:
         if noname:
             save_path = save_path + '-charges'
         colors = atoms.get_initial_charges().copy()
-        colorbar = True
-        add_legend = False
+        draw_colorbar = True
+        draw_legend = False
         center_data = True
 
-    # align max variance to x, y, z using PCA
-    if auto_rotate:
-        # get coordinates of Atoms
-        coords = atoms.positions.copy()
-
-        # transform coordinates
-        new_coords = utils.pca(coords)
-
-        # set coordinates of Atoms to new transformed coords
-        atoms.positions = new_coords
-
-    # center atoms (autorotate always centers atoms)
-    elif recenter:
-        atoms.positions -= atoms.positions.mean(0)
+    # build figure object
+    molecule = MolFig(atoms, scale=scale, colors=colors,
+                      bond_color=bond_color, bond_edgecolor=bond_edgecolor,
+                      labels=labels, cb_min=cb_range[0],
+                      cb_max=cb_range[1], center_data=center_data,
+                      cmap=cmap, square=square, rot_axis=rot_axis)
 
     # anchor specific atom to origin (all other atoms will rotate around it)
     if anchor is not None:
-        if isinstance(anchor, int) and 0 <= anchor <= len(atoms) - 1:
-            atoms.positions -= atoms[anchor].position
-            if noname:
-                save_path = save_path + '-anchor'
-        else:
-            print('Invalid anchor argument was given and will be ignored')
+        molecule.anchor(anchor)
 
-    # draw initial matplotlib figure
-    (fig, ax, save_path, bonds, patches, annotations,
-     radii, atomic_radii, bond_info) = build_initial_figure(
-                                return_all=True,
-                                atoms=atoms,
-                                scale=scale,
-                                add_bonds=add_bonds,
-                                bond_color=bond_color,
-                                bond_edgecolor=bond_edgecolor,
-                                colors=colors,
-                                colorbar=colorbar,
-                                add_legend=add_legend,
-                                leg_order=leg_order,
-                                use_charges=use_charges,
-                                square=square,
-                                labels=labels,
-                                save_path=save_path,
-                                noname=noname,
-                                rot_axis=rot_axis)
+    if smart_rotate:
+        molecule.smart_rotate()
+
+    # draw objects
+    molecule.draw_atoms()
+    if draw_bonds:
+        molecule.draw_bonds()
+    if labels is not None:
+        molecule.draw_labels()
+    if draw_legend:
+        molecule.draw_legend(leg_order=leg_order, max_ms=legend_max_ms)
+    if draw_colorbar:
+        molecule.draw_colorbar()
 
     # define how to transition to next frame
     def next_step(i):
@@ -507,30 +199,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
             print(' Building frame: ' + dig_str % (i + 2), end='\r')
 
         # rotate atoms
-        atoms.rotate(rot, v=rot_axis)
-
-        # move atoms (set_center) and change zorder (based on z coord)
-        for i, a in enumerate(atoms):
-            patches[i].center = (a.x, a.y)
-            patches[i].zorder = a.z
-
-            # translates text
-            if annotations[i]:
-                if sys.version_info[0] == 3:
-                    annotations[i].set_x(a.x)
-                    annotations[i].set_zorder(a.z + 0.001)
-                else:
-                    annotations[i].x = a.x
-                    annotations[i].zorder = a.z + 0.001
-
-        # redraws bonds
-        if add_bonds:
-            utils.draw_bonds(atoms, ax, radii, atomic_radii,
-                             bond_info, bonds=bonds,
-                             bond_color=bond_color,
-                             bond_edgecolor=bond_edgecolor,
-                             lines=ax.lines)
-            fig.canvas.draw()
+        molecule.rotate(rot, rot_axis)
         # hi Mike!!
 
     # print rotation gif info
@@ -550,6 +219,10 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     # determine runtype
     runtype = ['gif', 'frames'][save_frames]
 
+    if optimize_gif and transparent:
+        print('Can only optimize gif if images are not transparent.')
+        transparent = False
+
     # only save png frames if <save_frames>
     if save_frames or optimize_gif:
         frame_path = os.path.join(dirpath, name + '_frames')
@@ -557,28 +230,16 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
         if not os.path.isdir(frame_path):
             os.mkdir(frame_path)
         # TODO: NEW KARG???
-        transparent_frames = False
         for i in range(frames):
-            ram = io.BytesIO()
-            fig.savefig(ram, format='png', dpi=max_px / 5,
-                        transparent=transparent_frames)
-            ram.seek(0)
-            im = Image.open(ram)
-
-            # scale number of unique colors in png with number of atom types
-            ncolors = len(set(atoms.numbers)) + 15
-
-            im2 = im.convert('P', palette=Image.ADAPTIVE, colors=ncolors)
-
-            fname = os.path.join(frame_path, name + '_%03i.png' % (i + 1))
-            im2.save(fname, optimize=True)
-            # fig.savefig(fname.replace('.png', '-OLD.png'), dpi=max_px / 5,
-            #             transparent=transparent_frames)
-            # return
+            molecule.save(os.path.join(frame_path,
+                                       name + '_%03i.png' % (i + 1)),
+                          transparent=transparent)
             next_step(i)
     else:
         # build frames
-        animation = anim.FuncAnimation(fig, next_step, frames=frames)
+        animation = anim.FuncAnimation(molecule.fig,
+                                       next_step,
+                                       frames=frames)
 
         # initialize imagemagick writer
         if anim.writers.is_available('imagemagick'):
@@ -608,3 +269,7 @@ def rot_gif(atoms, save_path='', overwrite=False, loop_time=8, fps=20,
     plt.close()
     print(' ' * 50, end='\r')
     print('saved rotation %s' % runtype)
+
+if __name__ == '__main__':
+    a = ase.build.molecule('C2H6')
+    rot_gif(a, save_path='C:\\users\\mcowa\\desktop\\test.gif')
