@@ -2,12 +2,12 @@ from __future__ import division, print_function
 # TEMPORARY IMPORTS
 import utils
 import ase.build
-import ase.io
 # END
 # import molgif.utils as utils
 import os
 import io
 import subprocess
+import platform
 import copy
 import ase
 from ase.data import covalent_radii, chemical_symbols
@@ -19,6 +19,12 @@ from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.animation as anim
+
+# ensure that ImageMagick writer is found (and not Windows' convert.exe)
+if platform.system().lower().startswith('windows'):
+    if anim.rcParams['animation.convert_path'].endswith(('convert',
+                                                        'convert.exe')):
+        anim.rcParams['animation.convert_path'] = 'magick'
 
 
 class MolFig(object):
@@ -277,7 +283,7 @@ class MolFig(object):
 
         # redraw atoms if colors have changed
         if self._colors != old_colors and 'atoms' in self._drawn:
-            self.draw_atoms(force=True)
+            self.update(force=True, redraw=['atoms', 'legend'])
 
     def __check_labels__(self, value):
         # track to see if labels change
@@ -724,11 +730,13 @@ class MolFig(object):
                                             return_transform=True)
         self.atoms.positions = new_pos
 
+        self.__redraw__()
+
         # reinitialize figure to rescale
-        self.init_fig()
+        # self.init_fig()
 
         # redraw objects
-        self.update(force=True)
+        # self.update(force=True)
 
     def add_param(self, value):
         if value not in self.fig_params:
@@ -775,9 +783,22 @@ class MolFig(object):
             print("Unable to rotate - make sure angle "
                   "and rot_axis (if given) are valid")
 
+    def __redraw__(self):
+        """
+        Redraws figure, including new fig and ax objects
+        """
+        to_redraw = self.drawn.copy()
+        self.clear_figure()
+        plt.close(self.fig)
+        self.fig = None
+        self.ax = None
+        self.init_fig()
+        self.draw(to_redraw)
+
     def show(self):
         if isinstance(self.fig, plt.Figure):
-            self.fig.show()
+            plt.show()
+            self.__redraw__()
         else:
             raise TypeError('init_fig must first be called')
 
@@ -807,12 +828,19 @@ class MolFig(object):
         else:
             self.fig.savefig(path, transparent=transparent, dpi=dpi)
 
-    def update(self, force=False, recalc_bonds=None):
+    def update(self, force=False, recalc_bonds=None, redraw=None):
         if isinstance(recalc_bonds, bool):
             self.recalc_bonds = recalc_bonds
 
+        # only redraw items in <redraw> list if given
+        if redraw is not None:
+            to_redraw = [d for d in self._drawn if d in redraw]
+        # else redraw everything
+        else:
+            to_redraw = self._drawn
+
         # call all draw methods
-        self.draw(self._drawn, force=force)
+        self.draw(to_redraw, force=force)
 
     def rot_gif(self, path=None, fps=20, loop_time=6,
                 max_px=600, rot_axis='y', save_frames=False, overwrite=False,
@@ -908,10 +936,11 @@ class MolFig(object):
         return animation
 
 if __name__ == '__main__':
-    path = 'C:\\users\\mcowa\\desktop\\autu2oct_cn.xyz'
-    # a = ase.io.read(path)
-    a = ase.build.molecule('C60')
+    a = ase.build.molecule('C6H6')
     molecule = MolFig(a)
     molecule.draw()
-    # animation = molecule.rot_gif(optimize_gif=True)
-    plt.show()
+
+    # create rotating animation
+    animation = molecule.rot_animation(rot_axis='z', loop_time=2)
+    molecule.show()
+    # molecule.rot_gif(loop_time=2)
