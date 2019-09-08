@@ -4,6 +4,9 @@ create smooth gifs of rotating molecules
 
 ![C60](gifs/C60.gif)
 
+## Installation
+    pip install molgif
+
 ## Examples
 
 ### Use auto_rotate to find the best viewing angle
