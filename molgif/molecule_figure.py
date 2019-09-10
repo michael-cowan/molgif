@@ -6,6 +6,8 @@ import ase.build
 # import molgif.utils as utils
 import os
 import io
+import random
+import re
 import subprocess
 import platform
 import copy
@@ -14,6 +16,7 @@ from ase.data import covalent_radii, chemical_symbols
 from ase.data.colors import jmol_colors
 import numpy as np
 from PIL import Image
+import matplotlib
 import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
 import matplotlib.cm as cm
@@ -28,10 +31,10 @@ if platform.system().lower().startswith('windows'):
 
 
 class MolFig(object):
-    def __init__(self, atoms, scale=0.7, colors=None, name=None,
+    def __init__(self, atoms, scale=0.7, name=None, square=False,
+                 colors=None, labels=None, rot_axis=None,
                  bond_color='white', bond_edgecolor='black',
-                 labels=None, cb_min=None, cb_max=None, center_data=False,
-                 cmap=cm.bwr_r, square=False, rot_axis=None):
+                 cb_min=None, cb_max=None, center_data=False, cmap=cm.bwr_r):
 
         # string ids based on params of figure
         self.fig_params = []
@@ -51,7 +54,9 @@ class MolFig(object):
         self.bond_objs = []
 
         # rotation axis (if needed)
-        self.rot_axis = rot_axis
+        self._rot_axis = None
+        if isinstance(rot_axis, str) and re.match('-?[xyz]', rot_axis.lower()):
+            self._rot_axis = rot_axis
 
         # padding around atoms
         self.padding = None
@@ -115,7 +120,7 @@ class MolFig(object):
 
         # labels (write text on atoms)
         self._labels = None
-        self.__check_labels__(labels)
+        self._check_labels(labels)
 
         # legend attributes (track order)
         self.legend = None
@@ -125,7 +130,7 @@ class MolFig(object):
         self._colors = None
 
         # check input colors and see if they can be used with legend/colorbar
-        self.__check_colors__(colors)
+        self._check_colors(colors)
 
         # initialize figure
         self.init_fig()
@@ -159,7 +164,7 @@ class MolFig(object):
 
     @colors.setter
     def colors(self, value):
-        self.__check_colors__(value)
+        self._check_colors(value)
 
     # labels getter
     @property
@@ -168,7 +173,7 @@ class MolFig(object):
 
     @labels.setter
     def labels(self, value):
-        self.__check_labels__(value)
+        self._check_labels(value)
 
     # tracks items that have been drawn
     @property
@@ -180,7 +185,19 @@ class MolFig(object):
     def drawn(self, value):
         print('Not allowed to edit drawn list.')
 
-    def __check_colors__(self, value):
+    @property
+    def rot_axis(self):
+        return self._rot_axis
+
+    @rot_axis.setter
+    def rot_axis(self, value):
+        if (isinstance(value, str) and
+           re.match('-?[xyz]', value.lower()) and
+           value != self._rot_axis):
+            self._rot_axis = value
+            self._redraw()
+
+    def _check_colors(self, value):
         # track to see if colors have changed
         old_colors = copy.deepcopy(self._colors)
 
@@ -192,8 +209,13 @@ class MolFig(object):
         # track if colors were successfully converted
         failed = True
 
+        if str(value).lower() == 'random':
+            self._colors = [[random.random() for i in range(3)]
+                            for j in range(len(self))]
+            failed = False
+            self.block_legend = True
         # resort to default colors
-        if value is None:
+        elif value is None:
             failed = False
         # all atoms are same color
         elif isinstance(value, str):
@@ -242,9 +264,8 @@ class MolFig(object):
                     else:
                         maxval = self.cb_max
 
-                self.cb_norm = mcolors.Normalize(
-                                                vmin=minval,
-                                                vmax=maxval)
+                self.cb_norm = mcolors.Normalize(vmin=minval,
+                                                 vmax=maxval)
 
                 # save original values
                 self._cb_values = value.copy()
@@ -274,7 +295,7 @@ class MolFig(object):
                   "- resorting to default/previous colors")
 
         # use jmol_colors as default
-        if self.colors is None:
+        if None in [self._colors, value]:
             self._colors = [list(jmol_colors[i.number]) for i in self.atoms]
 
         # all atoms must be accounted for in colors list
@@ -285,7 +306,7 @@ class MolFig(object):
         if self._colors != old_colors and 'atoms' in self._drawn:
             self.update(force=True, redraw=['atoms', 'legend'])
 
-    def __check_labels__(self, value):
+    def _check_labels(self, value):
         # track to see if labels change
         old_labels = copy.deepcopy(self._labels)
 
@@ -331,7 +352,7 @@ class MolFig(object):
         # calculate axis limits (include offset as buffer)
         self.fig_size, self.xlim, self.ylim = utils.get_fig_bounds(
                                                         self.atoms,
-                                                        rot_axis=self.rot_axis,
+                                                        rot_axis=self._rot_axis,
                                                         square=self.square,
                                                         padding=self.padding)
 
@@ -424,14 +445,23 @@ class MolFig(object):
         if 'atoms' not in self._drawn:
             self._drawn.append('atoms')
 
-        self.fig.tight_layout()
+        # self.fig.tight_layout()
 
-    def draw_bonds(self, recalc_bonds=None, force=False):
+    def draw_bonds(self, bond_color='white', bond_edgecolor='k',
+                   recalc_bonds=None, force=False):
         """
         Draw bonds or update bond positions
         """
         # determine if drawing or updating bonds
         update = bool(len(self.bond_objs))
+
+        # if new bond colors, force a redraw
+        if self.bond_color != bond_color:
+            self.bond_color = bond_color
+            force = True
+        if self.bond_edgecolor != bond_edgecolor:
+            self.bond_edgecolor = bond_edgecolor
+            force = True
 
         # don't redraw if positions haven't changed
         if update:
@@ -522,7 +552,7 @@ class MolFig(object):
     def draw_labels(self, labels=None, force=False):
         # can pass in new label types when calling draw_labels
         if labels is not None:
-            self.__check_labels__(labels)
+            self._check_labels(labels)
 
         # determine if drawing or updating
         update_labels = bool(len(self.label_objs))
@@ -559,40 +589,48 @@ class MolFig(object):
         # return if legend is already drawn
         if 'legend' in self._drawn:
             # redraw legend if different leg_order
-            if isinstance(leg_order, str) and leg_order != self.leg_order:
+            if (isinstance(leg_order, str) and
+               leg_order != self.leg_order and
+               leg_order is not None):
                 self._drawn.remove('legend')
+                self.leg_order = leg_order
             elif not force:
                 return
 
-        # default leg_order is alphabetical
-        if leg_order is None:
-            leg_order = 'alphabetical'
-
-        # track current legend order
-        self.leg_order = leg_order
+        if self.leg_order is None:
+            # default leg_order is alphabetical
+            if leg_order is None:
+                self.leg_order = 'alphabetical'
+            else:
+                # track current legend order
+                self.leg_order = leg_order
+        elif leg_order is not None:
+            self.leg_order = leg_order
 
         # create an ordered, unique list of atom types
         symbols = sorted(set(self.atoms.symbols))
 
         # use custom legend order if given
-        if isinstance(leg_order, str) and leg_order != 'alphabetical':
+        if (isinstance(self.leg_order, str) and
+           self.leg_order != 'alphabetical'):
             # order legend by size
-            if leg_order in ['size', 'size_r']:
-                leg_order = sorted(
-                                    symbols,
-                                    key=lambda z: list(covalent_radii)[
-                                        chemical_symbols.index(z)],
-                                    reverse=leg_order == 'size')
+            if self.leg_order in ['size', 'size_r']:
+                symbols = sorted(
+                                symbols,
+                                key=lambda z: list(covalent_radii)[
+                                    chemical_symbols.index(z)],
+                                reverse=self.leg_order == 'size')
             else:
-                leg_order = [leg_order]
-        if isinstance(leg_order, list) or isinstance(leg_order,
-                                                     np.ndarray):
+                raise ValueError("Unable to hangle leg_order "
+                                 "= %s" % self.leg_order)
+        if isinstance(self.leg_order, list) or isinstance(self.leg_order,
+                                                          np.ndarray):
             # any types not in leg_order will be appended in
             # alphabetical order
-            leg_order = (list(leg_order) +
-                         [s for s in symbols if s not in leg_order])
+            leg_list = (list(self.leg_order) +
+                        [s for s in symbols if s not in self.leg_order])
 
-            symbols = sorted(symbols, key=lambda z: leg_order.index(z))
+            symbols = sorted(symbols, key=lambda z: leg_list.index(z))
 
         # get an atom object of each type
         all_symbols = list(self.atoms.symbols)
@@ -639,7 +677,8 @@ class MolFig(object):
         if 'legend' not in self._drawn:
             self._drawn.append('legend')
 
-    def draw_colorbar(self, force=False):
+    def draw_colorbar(self, cb_min=None, cb_max=None, center_data=None,
+                      force=False):
         if self.block_colorbar:
             print("Warning: Unable to draw colorbar - "
                   "values needed in place of colors")
@@ -650,6 +689,22 @@ class MolFig(object):
         # do not redraw colorbar
         if 'colorbar' in self._drawn and not force:
             return
+
+        # see if new min or max color scale (or center_data)
+        remake_color = False
+        if cb_min is not None and cb_min != self.cb_min:
+            self.cb_min = float(cb_min)
+            remake_color = True
+        if cb_max is not None and cb_max != self.cb_max:
+            self.cb_max = float(cb_max)
+            remake_color = True
+        if center_data is not None and center_data != self.center_data:
+            self.center_data = center_data
+            remake_color = True
+
+        # rescale colors
+        if remake_color:
+            self._check_colors(self._cb_values)
 
         # add in colorbar axis
         gs = self.fig.add_gridspec(1, 2, width_ratios=[30, 1])
@@ -663,7 +718,7 @@ class MolFig(object):
         cb.ax.tick_params(labelsize=11)
 
         # tighten layout after drawing colorbar
-        self.fig.tight_layout()
+        # self.fig.tight_layout()
 
         # add colorbar to list of drawn items
         if 'colorbar' not in self._drawn:
@@ -716,27 +771,22 @@ class MolFig(object):
             self.legend.remove()
             self.legend = None
             self._drawn.remove('legend')
-            self.fig.tight_layout()
+            # self.fig.tight_layout()
 
     def remove_colorbar(self):
         if isinstance(self.cb_ax, plt.Axes):
             self.fig.delaxes(self.cb_ax)
             self.cb_ax = None
             self._drawn.remove('colorbar')
-            self.fig.tight_layout()
+            # self.fig.tight_layout()
 
     def smart_rotate(self):
         new_pos, self.transform = utils.pca(self.atoms.positions,
                                             return_transform=True)
         self.atoms.positions = new_pos
 
-        self.__redraw__()
-
-        # reinitialize figure to rescale
-        # self.init_fig()
-
-        # redraw objects
-        # self.update(force=True)
+        # redraw figure
+        self._redraw()
 
     def add_param(self, value):
         if value not in self.fig_params:
@@ -770,20 +820,18 @@ class MolFig(object):
                 print('Invalid index given to anchor')
 
     def rotate(self, angle, rot_axis=None):
-        if rot_axis is None:
-            if self.rot_axis is None:
-                rot_axis = 'y'
-            else:
-                rot_axis = self.rot_axis
+        self.rot_axis = rot_axis
+        if self.rot_axis is None:
+            self.rot_axis = 'y'
+
         try:
-            self.atoms.rotate(angle, v=rot_axis)
-            self.rot_axis = rot_axis
+            self.atoms.rotate(angle, v=self.rot_axis)
             self.update()
         except:
             print("Unable to rotate - make sure angle "
                   "and rot_axis (if given) are valid")
 
-    def __redraw__(self):
+    def _redraw(self):
         """
         Redraws figure, including new fig and ax objects
         """
@@ -798,7 +846,7 @@ class MolFig(object):
     def show(self):
         if isinstance(self.fig, plt.Figure):
             plt.show()
-            self.__redraw__()
+            self._redraw()
         else:
             raise TypeError('init_fig must first be called')
 
@@ -806,7 +854,7 @@ class MolFig(object):
         dpi = max_px / 5
 
         if path is None:
-            path = '%s-%s.png' % (self.atoms.get_chemical_formula(),
+            path = '%s-%s.png' % (self.name,
                                   '-'.join(self.fig_params))
 
         if not overwrite:
@@ -842,11 +890,11 @@ class MolFig(object):
         # call all draw methods
         self.draw(to_redraw, force=force)
 
-    def rot_gif(self, path=None, fps=20, loop_time=6,
-                max_px=600, rot_axis='y', save_frames=False, overwrite=False,
-                optimize_gif=False):
+    def save_rot_gif(self, path=None, fps=20, loop_time=6,
+                     max_px=600, rot_axis='y', save_frames=False,
+                     overwrite=False, optimize_gif=False):
         if path is None:
-            path = 'C:\\users\\mcowa\\desktop\\test.gif'
+            path = '%s-%s.gif' % (self.name, '-'.join(self.fig_params))
 
         # ensure path ends with .gif
         if not path.endswith('.gif'):
@@ -881,8 +929,8 @@ class MolFig(object):
                 self.rotate(rot)
         # else make gif with matplotlib.animation and image magick
         else:
-            animation = self.rot_animation(fps=fps, loop_time=loop_time,
-                                           rot_axis=rot_axis, gif=True)
+            animation = self.build_rot_animation(fps=fps, loop_time=loop_time,
+                                                 rot_axis=rot_axis, gif=True)
 
             # initialize imagemagick writer
             if anim.writers.is_available('imagemagick'):
@@ -894,6 +942,8 @@ class MolFig(object):
 
             # save gif
             animation.save(path, writer=writer, dpi=max_px / 5)
+            print(' ' * 50, end='\r')
+            print(' Saved %s' % path)
 
         if optimize_gif:
             print(' Creating optimized gif...', end='\r')
@@ -905,16 +955,20 @@ class MolFig(object):
                 os.remove(os.path.join(frame_path, f))
             os.removedirs(frame_path)
 
-    def rot_animation(self, fps=20, loop_time=6, rot_axis='y', gif=False):
+    def build_rot_animation(self, fps=20, loop_time=6, rot_axis=None,
+                            gif=False):
         frames = fps * loop_time
         rot = 360 / frames
         dig_str = '%0{}i'.format(len(str(frames)))
 
         # adjust axis limits based on rot_axis
-        self.rot_axis = rot_axis
-        self.init_fig()
-        self.update(force=True)
-        self.fig.tight_layout()
+        # setting self.rot_axis automatically redraws
+        changed = False
+        if rot_axis is None:
+            if self._rot_axis is None:
+                self.rot_axis = 'y'
+        else:
+            self.rot_axis = rot_axis
 
         def next_step(i):
             # print out progress if building gif
@@ -932,15 +986,16 @@ class MolFig(object):
         animation = anim.FuncAnimation(self.fig,
                                        next_step,
                                        frames=frames,
-                                       interval=100/fps)
+                                       interval=1000/fps)
         return animation
 
 if __name__ == '__main__':
-    a = ase.build.molecule('C6H6')
-    molecule = MolFig(a)
-    molecule.draw()
+    name = 'C4H4O'
+    atoms = ase.build.molecule(name)
 
-    # create rotating animation
-    animation = molecule.rot_animation(rot_axis='z', loop_time=2)
+    molecule = MolFig(atoms, scale=0.8)
+    molecule.draw()
     molecule.show()
-    # molecule.rot_gif(loop_time=2)
+    molecule.smart_rotate()
+    molecule.show()
+    molecule.save_rot_gif()
