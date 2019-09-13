@@ -932,7 +932,8 @@ class Molecule(object):
         else:
             raise TypeError('init_fig must first be called')
 
-    def save(self, path=None, overwrite=False, max_px=600, transparent=False):
+    def save(self, path=None, overwrite=False, max_px=600, transparent=False,
+             optimize=False):
         """
         Save the current figure
         - if saving as *.png, method attempts to optimize image
@@ -952,6 +953,10 @@ class Molecule(object):
 
         - transparent (bool): if True, saved with transparent background
                               (Default: False)
+
+        - optimize (bool): optimizes png if no colorbar is drawn
+                           - NOTE: could result in some loss of quality
+                           (Default: False)
         """
         dpi = max_px / 5
 
@@ -963,7 +968,9 @@ class Molecule(object):
         if not overwrite:
             path = utils.avoid_overwrite(path)
 
-        if path.endswith('.png') and 'colorbar' not in self._drawn:
+        if (optimize and
+           path.endswith('.png') and
+           'colorbar' not in self._drawn):
             ram = io.BytesIO()
             self.fig.savefig(ram, format='png', dpi=dpi,
                              transparent=transparent)
@@ -1105,7 +1112,7 @@ class Molecule(object):
                 print(' Saving frame %03i' % (i + 1), end='\r')
                 self.save(os.path.join(frame_path,
                                        self.name + '_%03i.png' % (i + 1)),
-                          max_px=max_px)
+                          max_px=max_px, optimize=optimize_gif)
                 self.rotate(rot)
         # else make gif with matplotlib.animation and image magick
         else:
