@@ -28,7 +28,7 @@ create smooth gifs of rotating molecules
 
     molgif.rot_gif(c4h4o, smart_rotate=True, add_legend=True)
 
-    # can also smart_rotate atoms object using pca in utils
+    # can also smart_rotate atoms object using function in utils
     c4h4o = molgif.utils.smart_rotate_atoms(c4h4o)
 
 ![c4h4o-1](gifs/C4H4O-1.gif)
