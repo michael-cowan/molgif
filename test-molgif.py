@@ -4,9 +4,6 @@ import random
 import ase.build
 import numpy as np
 
-desk = os.path.join(os.path.expanduser('~'), 'Desktop')
-os.chdir(desk)
-
 if not os.path.isdir('TESTING_MOLGIF'):
     os.mkdir('TESTING_MOLGIF')
 os.chdir('TESTING_MOLGIF')

@@ -1075,7 +1075,7 @@ class Molecule(object):
 
         # calc gif info
         # total number of frames
-        frames = fps * loop_time
+        frames = int(fps * loop_time)
         # angle to rotate between frames (in degrees)
         rot = 360 / frames
         dig_str = '%0{}i'.format(len(str(frames)))
@@ -1174,7 +1174,7 @@ class Molecule(object):
                           (Default: False)
         """
         # calc gif info
-        frames = fps * loop_time
+        frames = int(fps * loop_time)
         rot = 360 / frames
         dig_str = '%0{}i'.format(len(str(frames)))
 
