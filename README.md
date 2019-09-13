@@ -2,114 +2,116 @@
 
 create smooth gifs of rotating molecules
 
+## Installation
+
+    pip install molgif
+
 ![C60](gifs/C60.gif)
 
 ## Examples
 
-### Use smart_rotate to find the best viewing angle
+### Easily create gif with rot_gif function
 
     import molgif
     import ase.build
 
     # load in molecule (ase.Atoms object)
-    molecule = ase.build.molecule('biphenyl')
+    c4h4o = ase.build.molecule('c4h4o')
+    c4h4o.rotate(60, 'z')
 
-    # create rotating gif with rot_gif function
-    molgif.rot_gif(molecule, smart_rotate=True)
+    # create rotating gif
+    molgif.rot_gif(atoms)
 
-![biphenyl](gifs/biphenyl.gif)
+![c4h4o](gifs/C4H4O.gif)
 
-### Add a legend
+### Use smart_rotate to find best viewing angle and add a legend
 
-    molgif.rot_gif(molecule, add_legend=True)
+    molgif.rot_gif(c4h4o, smart_rotate=True, add_legend=True)
 
-![biphenyl-legend](gifs/biphenyl-legend.gif)
+    # can also smart_rotate atoms object using pca in utils
+    c4h4o = molgif.utils.smart_rotate_atoms(c4h4o)
+
+![c4h4o-1](gifs/C4H4O-1.gif)
 
 ### Specify the color of each atom
 
     # can be a string for one color or a list of custom colors
     rainbow = ['red', 'orange', 'yellow',
-               'green', 'blue', 'violet'] * 4
+               'green', 'blue', 'violet'] * 2
 
-    # list much match number of atoms
-    rainbow = rainbow[:len(molecule)]
+    # list length much match number of atoms
+    rainbow = rainbow[:len(c4h4o)]
 
-    molgif.rot_gif(molecule, colors=rainbow)
+    molgif.rot_gif(c4h4o, colors=rainbow)
 
-![biphenyl-rainbow](gifs/biphenyl-rainbow.gif)
+![c4h4o-2](gifs/C4H4O-2.gif)
 
-### Use a dictionary to quickly color by atom type
+### Use a dictionary to quickly color by atom type and add a legend that's ordered by size
 
     # default colors will be used for types not specified
-    molgif.rot_gif(molecule, colors=dict(C='hotpink'),
-                   add_legend=True)
+    # can also order legend by size
+    molgif.rot_gif(c4h4o, colors=dict(C='hotpink'),
+                   add_legend=True, leg_order='size')
 
-![biphenyl-hotpink](gifs/biphenyl-hotpink.gif)
+![c4h4o-3](gifs/C4H4O-3.gif)
 
 ### Anchor an atom to be at the center of rotation
 
     # define index of atom to anchor
     anchor = 3
 
-    colors = ['white'] * len(molecule)
+    colors = ['white'] * len(c4h4o)
     colors[anchor] = '#0892d0'
 
-    molgif.rot_gif(molecule, colors=colors,
+    molgif.rot_gif(c4h4o, colors=colors,
                    anchor=anchor)
 
-![biphenyl-anchor](gifs/biphenyl-anchor.gif)
+![c4h4o-4](gifs/C4H4O-4.gif)
 
 ### Adjust loop time and FPS
 
     # loop_time = time to complete one rotation (seconds)
-    molgif.rot_gif(molecule, loop_time=2, fps=60)
+    molgif.rot_gif(c4h4o, loop_time=2, fps=60)
 
-![biphenyl-2s-looptime](gifs/biphenyl-2s-looptime.gif)
+![c4h4o-5](gifs/C4H4O-5.gif)
 
 ### Turn off bonds and scale atomic sizes
 
-    molgif.rot_gif(molecule, add_bonds=False,
+    molgif.rot_gif(c4h4o, add_bonds=False,
                    scale=0.9)
 
-![biphenyl-no-bonds](gifs/biphenyl-no-bonds.gif)
+![c4h4o-6](gifs/C4H4O-6.gif)
 
 ### Change rotation axis
 
     # switch between x, y (Default), or z
-    molgif.rot_gif(molecule, rot_axis='z')
+    molgif.rot_gif(c4h4o, rot_axis='x')
 
-![biphenyl-rotz](gifs/biphenyl-rotz.gif)
+![c4h4o-7](gifs/C4H4O-7.gif)
 
 ### Switch rotation direction
 
-    # counterclockwise (ccw)[Default] or clockwise (cw)
-    # based on rot_axis
-    # 'x': view from left
-    # 'y': view from top
-    # 'z': view into screen
-    molgif.rot_gif(molecule, direction='cw')
+    # "negative" rot_axis = opposite direction
+    molgif.rot_gif(c4h4o, rot_axis='-x')
 
-![biphenyl-cw](gifs/biphenyl-cw.gif)
+![c4h4o-8](gifs/C4H4O-8.gif)
 
 ### Visualize charges
 
-    import random
-
     # random charges [-1, 1]
-    chgs = [-1 + 2 * random.random() for i in molecule]
+    chgs = np.linspace(-1, 1, len(atoms))
+    np.random.shuffle(chgs)
 
-    # manually set the colorbar range (optional)
-    cb_range = (-1, 1)
+    # add the charges to atoms object
+    atoms.set_initial_charges(chgs)
 
-    molecule.set_initial_charges(chgs)
+    molgif.rot_gif(atoms, max_px=max_px, use_charges=True)
 
-    molgif.rot_gif(molecule, use_charges=True,
-                   cb_range=cb_range)
-
-![biphenyl-charges](gifs/biphenyl-charges.gif)
+![c4h4o-9](gifs/C4H4O-9.gif)
 
 ## Requirements
 
 - ase
 - matplotlib
+- PIL
 - ImageMagick (command line tools must be installed)
