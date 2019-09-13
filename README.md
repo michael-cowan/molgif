@@ -8,6 +8,9 @@ create smooth gifs of rotating molecules
 
 ![C60](gifs/C60.gif)
 
+## Installation
+    pip install molgif
+
 ## Examples
 
 ### Easily create gif with rot_gif function
