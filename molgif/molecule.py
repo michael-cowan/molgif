@@ -33,7 +33,7 @@ class Molecule(object):
                  colors=None, labels=None, rot_axis=None,
                  bond_color='white', bond_edgecolor='black',
                  cb_min=None, cb_max=None, center_data=False, cmap=cm.bwr_r,
-                 draw=['atoms', 'bonds', 'labels']):
+                 draw=['atoms', 'bonds']):
         """
         Molecule figure object that enables dynamic drawing, manipulating,
         and animating a matplotlib Figure
@@ -97,7 +97,7 @@ class Molecule(object):
                            (Default: matplotlib.cm.bwr_r)
 
         - draw (list): items to immediately draw after initialization
-                       (Default: ['atoms', 'bonds', 'labels'])
+                       (Default: ['atoms', 'bonds'])
         """
         # string ids based on params of figure
         self.fig_params = []

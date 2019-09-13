@@ -18,5 +18,5 @@ setuptools.setup(name='molgif',
                  packages=setuptools.find_packages(),
                  python_requires='>=2.7',
                  install_requires=['matplotlib',
-                                   'PIL',
+                                   'pillow',
                                    'ase'])
