@@ -192,6 +192,27 @@ def get_fig_bounds(atoms, rot_axis=None, square=False,
     return fig_size, xlim, ylim
 
 
+def path2atoms(path):
+    """
+    Checks to see if path can be read in as an ase.Atoms object
+    - returns path back if it is already an ase.Atoms object
+
+    Args:
+    - path (str): path to geometry file
+
+    Returns:
+    - ase.Atoms: atoms object
+    """
+    if isinstance(path, ase.Atoms):
+        return path
+    try:
+        atoms = ase.io.read(path)
+        return atoms
+    except:
+        raise ValueError("path does not lead to a "
+                         "supported geometry file")
+
+
 def pca(pos, return_transform=False, tranform=None):
     """
     PCA transformation using numpy
@@ -239,3 +260,18 @@ def pca(pos, return_transform=False, tranform=None):
     else:
         return pos_pca
     return pos_pca, evecs if return_transform else pos_pca
+
+
+def smart_rotate_atoms(atoms):
+    """
+    Applies "smart" rotation to atoms object
+
+    Args:
+    atoms (ase.Atoms): atoms object to rotate
+
+    Returns:
+    (ase.Atoms): new atoms object with transformed (rotated) coords
+    """
+    new_atoms = atoms.copy()
+    new_atoms.positions = pca(atoms.positions.copy())
+    return new_atoms
