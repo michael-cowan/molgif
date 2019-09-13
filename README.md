@@ -113,5 +113,5 @@ create smooth gifs of rotating molecules
 
 - ase
 - matplotlib
-- PIL
+- pillow
 - ImageMagick (command line tools must be installed)
