@@ -195,22 +195,6 @@ class Molecule(object):
         # initialize figure
         self.init_fig()
 
-        # get scaled widths based on axis size
-        # atom border width
-        self.scaled_borderwidth = utils.angstrom_to_axunits(
-                                    self.atom_borderwidth,
-                                    self.ax)
-
-        # bond width (black line) and bond fill (white line)
-        self.scaled_bond_width = utils.angstrom_to_axunits(
-                                    self.bond_width,
-                                    self.ax)
-        # width of bond border = width of atom border
-        bondedge = self.bond_width - 2 * self.atom_borderwidth
-        self.scaled_bond_fill = utils.angstrom_to_axunits(
-                                    bondedge,
-                                    self.ax)
-
         # draw any initial items given in <draw>
         self.draw(draw)
 
@@ -340,6 +324,22 @@ class Molecule(object):
         # set aspect ratio to 1
         self.ax.set_aspect(1)
 
+        # get scaled widths based on axis size
+        # atom border width
+        self.scaled_borderwidth = utils.angstrom_to_axunits(
+                                    self.atom_borderwidth,
+                                    self.ax)
+
+        # bond width (black line) and bond fill (white line)
+        self.scaled_bond_width = utils.angstrom_to_axunits(
+                                    self.bond_width,
+                                    self.ax)
+        # width of bond border = width of atom border
+        bondedge = self.bond_width - 2 * self.atom_borderwidth
+        self.scaled_bond_fill = utils.angstrom_to_axunits(
+                                    bondedge,
+                                    self.ax)
+
     def clear_figure(self):
         """
         Removes everything from figure
@@ -364,6 +364,9 @@ class Molecule(object):
         - force (bool): if True, all items are forced to redraw
                         (Default: False)
         """
+        # items must be a list
+        if not isinstance(items, list) or items == []:
+            return
         # draw elements in item list
         for item in items:
             method = 'draw_' + item
@@ -371,9 +374,6 @@ class Molecule(object):
                 getattr(self, method)(force=force)
             else:
                 print(item, 'can not be drawn.')
-        if isinstance(self.fig, plt.Figure):
-            self.fig.canvas.draw()
-            self.fig.canvas.flush_events()
 
     def draw_atoms(self, force=False):
         """
@@ -688,7 +688,7 @@ class Molecule(object):
             columnspacing=0,
             markerscale=1,
             labelspacing=np.sqrt(utils.angstrom_to_axunits(0.08, self.ax)),
-            bbox_to_anchor=(1, 0.5),
+            bbox_to_anchor=(0.99, 0.5),
             loc='center right',
             framealpha=0,
             # up to nine atom types per column
@@ -753,7 +753,7 @@ class Molecule(object):
         self.fig.colorbar(mappable, cax=self.cb_ax)
 
         # readjust figure borders so colorbar is not cut off
-        self.fig.subplots_adjust(wspace=0, right=0.88, bottom=0.05, top=0.95)
+        self.fig.subplots_adjust(wspace=0, right=0.85, bottom=0.05, top=0.95)
 
         # set font size
         self.cb_ax.tick_params(labelsize=11)
@@ -1109,7 +1109,7 @@ class Molecule(object):
             # iteratively save all frames
             print(' ' * 50, end='\r')
             for i in range(frames):
-                print(' Saving frame %03i' % (i + 1), end='\r')
+                print('   Saving frame: %03i' % (i + 1), end='\r')
                 self.save(os.path.join(frame_path,
                                        self.name + '_%03i.png' % (i + 1)),
                           max_px=max_px, optimize=optimize_gif)
@@ -1147,7 +1147,7 @@ class Molecule(object):
 
         # let user know the gif has been saved
         print(' ' * 50, end='\r')
-        print(' Saved %s' % path)
+        print('          Saved: %s' % path)
         print('-' * 50)
 
     def build_rot_animation(self, fps=20, loop_time=6, rot_axis=None,
