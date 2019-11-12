@@ -53,10 +53,10 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
     - smart_rotate (bool): if True, PCA is applied to coords to orient atoms
                            such that max variance is in x-axis
                            (Default: False)
-    - anchor (int): if given, atoms[anchor] will be set to the origin
-                    so all other atoms rotate around it while it remains
-                    stationary
-                    (Default: None)
+    - anchor (int | str): if given, atoms[anchor] will be set to the origin
+                          so all other atoms rotate around it while it remains
+                          stationary
+                          (Default: None)
     - rot_axis (str): specify axis to rotate about
                       - x (left-to-right), y (bot-to-top), or
                         z (counter-clockwise)

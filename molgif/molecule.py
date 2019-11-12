@@ -153,7 +153,10 @@ class Molecule(object):
         self.atom_borderwidth = 0.05
 
         # atom size scale (covalent_radii * scale)
-        self.scale = scale
+        self._scale = abs(float(scale))
+
+        # track to see when scale changes
+        self._prevscale = self._scale
 
         # get atomic radii based on scale
         self.radii = covalent_radii[self.atoms.numbers] * self.scale
@@ -180,6 +183,10 @@ class Molecule(object):
 
         # labels (write text on atoms)
         self._labels = None
+
+        # default label size: 15
+        self._label_size = 15
+
         self._check_labels(labels)
 
         # legend attributes (track order)
@@ -188,6 +195,9 @@ class Molecule(object):
 
         # color attributes
         self._colors = None
+
+        # track if colors have changed
+        self._prevcolors = None
 
         # check input colors and see if they can be used with legend/colorbar
         self._check_colors(colors)
@@ -204,6 +214,9 @@ class Molecule(object):
 
     def __repr__(self):
         return 'molgif.Molecule(%s)' % self.atoms.get_chemical_formula()
+
+    def __getitem__(self, i):
+        return self.atoms[i]
 
     # colors getter
     @property
@@ -242,6 +255,40 @@ class Molecule(object):
     @labels.setter
     def labels(self, value):
         self._check_labels(value)
+
+    @property
+    def label_size(self):
+        return self._label_size
+
+    @label_size.setter()
+    def label_size(self, value):
+        if isinstance(value, str):
+            value = value.lower()
+            if re.match('(x{0,2}-)?(small|large)') or value == 'medium':
+                self._label_size = value
+        else:
+            try:
+                self._label_size = int(value)
+            except ValueError:
+                print('Label size must be point size or relative value '
+                      '(small, medium, etc.)')
+
+    @property
+    def scale(self):
+        """
+        """
+        return self._scale
+
+    @scale.setter
+    def scale(self, value):
+        try:
+            value = abs(float(value))
+            if value != self._scale:
+                self._scale = value
+                if 'atoms' in self._drawn:
+                    self.draw_atoms()
+        except (ValueError, TypeError):
+            print('Scale must be a number')
 
     # tracks items that have been drawn
     @property
@@ -347,7 +394,7 @@ class Molecule(object):
         """
         self.remove('all')
 
-    def draw(self, items=['atoms', 'bonds', 'labels'], force=False):
+    def draw(self, items=None, force=False):
         """
         Draws multiple object types at once
         - Default: draws atoms, bonds, and labels (if any specified)
@@ -364,6 +411,10 @@ class Molecule(object):
         - force (bool): if True, all items are forced to redraw
                         (Default: False)
         """
+        # defaults to drawn list
+        if items is None:
+            items = self._drawn.copy()
+
         # items must be a list
         if not isinstance(items, list) or items == []:
             return
@@ -383,22 +434,42 @@ class Molecule(object):
         - force (bool): if True, atoms are forced to redraw
                         (Default: False)
         """
-        # determine if drawing or updating
-        update = bool(len(self.atom_objs))
 
-        # don't redraw if positions haven't changed
-        if update:
-            if (self.pos == self.atoms.positions).all():
-                if not force:
-                    return
-            else:
-                self.pos = self.atoms.positions.copy()
+        # remove atoms if forcing to redraw
+        if force:
+            [i.remove() for i in self.atom_objs]
+            self.fig.canvas.draw()
+            self.atom_objs = []
+
+        # determine if drawing or updating
+        update = False
+        if (self.pos != self.atoms.positions).any():
+            update = True
+            self.pos = self.atoms.positions.copy()
+        if self._scale != self._prevscale:
+            update = True
+            self.radii = covalent_radii[self.atoms.numbers] * self._scale
+            self._prevscale = self._scale
+            if 'bonds' in self._drawn:
+                self.draw_bonds(force=True)
+
+        if self._colors != self._prevcolors:
+            update = True
+            self._prevcolors = self._colors
+
+        # don't redraw if params haven't changed
+        if self.atom_objs:
+            if not (update or force):
+                return
+        else:
+            force = True
 
         # create atom patches and add to ax
         for i, a in enumerate(self.atoms):
             # update atom objects
-            if update:
+            if update and not force:
                 self.atom_objs[i].set_facecolor(self._colors[i])
+                self.atom_objs[i].radius = self.radii[i]
                 self.atom_objs[i].center = (a.x, a.y)
                 self.atom_objs[i].zorder = a.z
             # create atom object patches
@@ -534,7 +605,7 @@ class Molecule(object):
         if 'bonds' not in self._drawn:
             self._drawn.append('bonds')
 
-    def draw_labels(self, labels=None, force=False):
+    def draw_labels(self, labels=None, label_size=None, force=False):
         """
         Draw labels or update label position
 
@@ -562,12 +633,16 @@ class Molecule(object):
         # determine if drawing or updating
         update_labels = bool(len(self.label_objs))
 
+        if label_size is not None:
+            self.label_size = label_size
+
         for i, a in enumerate(self.atoms):
             if update_labels:
                 self.label_objs[i].set_text(self._labels[i])
                 self.label_objs[i].set_x(a.x)
                 self.label_objs[i].set_y(a.y)
                 self.label_objs[i].set_zorder(a.z + 0.001)
+                self.label_objs[i].set_size(self._label_size)
             else:
                 ann = self.ax.annotate(
                             self._labels[i],
@@ -575,7 +650,7 @@ class Molecule(object):
                             zorder=a.z + 0.001,
                             ha='center',
                             va='center',
-                            fontsize=15)
+                            fontsize=self._label_size)
                 # add annotation to label_objs list
                 self.label_objs.append(ann)
 
@@ -743,6 +818,7 @@ class Molecule(object):
 
         # rescale colors
         if remake_color:
+            print('checking colors!')
             self._check_colors(self._cb_values)
 
         # add in colorbar axis
@@ -793,6 +869,7 @@ class Molecule(object):
                 a.remove()
             self.atom_objs = []
             self._drawn.remove('atoms')
+            self.fig.canvas.draw()
 
     def remove_bonds(self):
         """
@@ -865,6 +942,7 @@ class Molecule(object):
         - <i> can also be cartesian coordinates
 
         Args:
+        - i (str): atom element to anchor - matches first element in list
         - i (int): index of atom that should be translated to origin
         - i (list): cartesian coordinates that should be translated to origin
         """
@@ -874,6 +952,9 @@ class Molecule(object):
             else:
                 raise ValueError('not cartesian coordinates')
         except:
+            if isinstance(i, str) and i.title() in self.atoms.symbols:
+                    i = np.where(self.atoms.symbols == i.title())[0][0]
+
             if 0 <= i < len(self):
                 self.atoms.positions -= self.atoms[i].position
                 # recalculate axis boundaries
@@ -881,6 +962,12 @@ class Molecule(object):
                 self.add_param('anchor')
             else:
                 print('Invalid index given to anchor')
+
+    def center(self):
+        """
+        Center atoms by center-of-position (COP)
+        """
+        self.anchor(self.atom.positions.mean(0))
 
     def rotate(self, angle, rot_axis=None):
         """
@@ -1064,6 +1151,8 @@ class Molecule(object):
             # TODO: Implement self.fig_params for
             # more descriptive default gif name
             # path = '%s-%s.gif' % (self.name, '-'.join(self.fig_params))
+        elif os.path.isdir(path):
+            path = os.path.join(path, self.name + '.gif')
 
         # ensure path ends with .gif
         if not path.endswith('.gif'):
@@ -1316,8 +1405,8 @@ class Molecule(object):
             raise ValueError("length of colors must be equal to # atoms")
 
         # redraw atoms if colors have changed
-        if self._colors != old_colors and 'atoms' in self._drawn:
-            self.update(force=True, redraw=['atoms', 'legend'])
+        if self._colors != self._prevcolors and 'atoms' in self._drawn:
+            self.update(redraw=['atoms', 'legend'])
 
     def _check_labels(self, value):
         """
