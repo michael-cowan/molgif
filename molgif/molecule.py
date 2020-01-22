@@ -299,11 +299,6 @@ class Molecule(object):
         """
         return self._drawn
 
-    # drawn is read only
-    @drawn.setter
-    def drawn(self, value):
-        print('Not allowed to edit drawn list.')
-
     @property
     def rot_axis(self):
         """
