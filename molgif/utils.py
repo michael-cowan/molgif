@@ -192,6 +192,69 @@ def get_fig_bounds(atoms, rot_axis=None, square=False,
     return fig_size, xlim, ylim
 
 
+def _opt_angle(atom, tol=1e-6, verbose=False):
+    """
+    Finds angle to rotate atoms about z-axis to:
+    - maximize x and y distance of atoms
+    - prioritizes x distance over y distance
+    """
+    def get_dists(atom):
+        return (atom.positions.max(0) - atom.positions.min(0))[:2]
+
+    atom = atom.copy()
+
+    # angle increment
+    inc = 2
+
+    prevang = inc
+    ang = inc
+    test_atom = atom.copy()
+    converged = False
+    prevscore = np.product(get_dists(atom))
+    count = 0
+    while 1:
+        # rotate test_atom by current increment
+        test_atom.rotate(inc, 'z')
+
+        # calculate current score (product of x and y dists)
+        score = np.product(get_dists(test_atom))
+
+        # if score has converged (abs(change) is less than <tol>),
+        # return average of previous 2 angles
+        if abs(score - prevscore) < tol:
+            final = round((ang + prevang) / 2, 4)
+            final2 = min([final + 90, final - 90], key=lambda i: abs(i))
+
+            # calculate distance with solved angle
+            a = atom.copy()
+            a.rotate(final, 'z')
+            d = get_dists(a)
+
+            # calculate distance with solved angle + 90 degree rotation
+            a2 = atom.copy()
+            a2.rotate(final2, 'z')
+            d2 = get_dists(a2)
+
+            # print number of iterations needed for optimization
+            # needed at given tolerance (<tol>)
+            if verbose:
+                print('TOLERANCE: %.2e' % tol)
+                print(' OPT TOOK: %i iterations!' % count)
+
+            # return angle that maximizes X
+            return final if d[0] > d2[0] else final2
+
+        # if rotated too far, reverse and half increment
+        if (score > prevscore).all():
+            inc *= (-1/2.)
+
+        # print(ang)
+        prevang = ang
+        ang += inc
+        prevscore = score
+        count += 1
+
+
 def path2atoms(path):
     """
     Checks to see if path can be read in as an ase.Atoms object
@@ -274,4 +337,9 @@ def smart_rotate_atoms(atoms):
     """
     new_atoms = atoms.copy()
     new_atoms.positions = pca(atoms.positions.copy())
+
+    # use _opt_angle to fine-tune xy-plane rotation
+    rotz = _opt_angle(new_atoms)
+    new_atoms.rotate(rotz, 'z')
+
     return new_atoms

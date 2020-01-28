@@ -260,7 +260,7 @@ class Molecule(object):
     def label_size(self):
         return self._label_size
 
-    @label_size.setter()
+    @label_size.setter
     def label_size(self, value):
         if isinstance(value, str):
             value = value.lower()
@@ -908,10 +908,14 @@ class Molecule(object):
         Applies "smart" rotation to molecule
         - attempts to find the best viewing angle using PCA (love this idea)
         """
-        new_pos, self.transform = utils.pca(self.atoms.positions.copy(),
-                                            return_transform=True)
+        # TODO: correct transformation matrix from extra step
+        # in new smart_rotate
+        self.atoms = utils.smart_rotate_atoms(self.atoms)
 
-        self.atoms.positions = new_pos.copy()
+        # new_pos, self.transform = utils.pca(self.atoms.positions.copy(),
+        #                                     return_transform=True)
+
+        # self.atoms.positions = new_pos.copy()
 
         # redraw figure
         self.redraw()
