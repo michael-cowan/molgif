@@ -304,10 +304,11 @@ def pca(pos, return_transform=False, tranform=None):
 
     # covariance = (x.T * x) / (n - 1)
     # do not need to subtract off mean since data is centered
-    co = np.dot(pos.T, pos) / (len(pos) - 1)
+    # co = np.dot(pos.T, pos) / (len(pos) - 1)
+    co = np.cov(pos, rowvar=False)
 
     # find eigenvalues and eigenvectors
-    evals, evecs = np.linalg.eig(co)
+    evals, evecs = np.linalg.eigh(co)
 
     # sort evals
     indices = evals.argsort()[::-1]
