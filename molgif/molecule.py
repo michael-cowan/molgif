@@ -903,14 +903,14 @@ class Molecule(object):
             self.cb_ax = None
             self._drawn.remove('colorbar')
 
-    def smart_rotate(self):
+    def smart_rotate(self, opt_angle=True):
         """
         Applies "smart" rotation to molecule
         - attempts to find the best viewing angle using PCA (love this idea)
         """
         # TODO: correct transformation matrix from extra step
         # in new smart_rotate
-        self.atoms = utils.smart_rotate_atoms(self.atoms)
+        self.atoms = utils.smart_rotate_atoms(self.atoms, opt_angle=opt_angle)
 
         # new_pos, self.transform = utils.pca(self.atoms.positions.copy(),
         #                                     return_transform=True)

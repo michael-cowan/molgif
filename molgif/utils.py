@@ -235,14 +235,17 @@ def _opt_angle(atom, tol=1e-6, verbose=False):
             a2.rotate(final2, 'z')
             d2 = get_dists(a2)
 
+            # return angle that maximizes X
+            angle = final if d[0] < d2[0] else final2
+
             # print number of iterations needed for optimization
-            # needed at given tolerance (<tol>)
+            # at given tolerance (<tol>) and opt angle
             if verbose:
                 print('TOLERANCE: %.2e' % tol)
                 print(' OPT TOOK: %i iterations!' % count)
+                print('OPT ANGLE: %.2f deg.' % angle)
 
-            # return angle that maximizes X
-            return final if d[0] > d2[0] else final2
+            return angle
 
         # if rotated too far, reverse and half increment
         if (score > prevscore).all():
@@ -295,6 +298,13 @@ def pca(pos, return_transform=False, tranform=None):
                             - transforms new positions from different PCA
                             (Default: None)
     """
+    # can only apply pca to 2 or more atoms
+    if pos.shape[0] == 1:
+        if return_transform:
+            return pos, np.eye(3)
+
+        return pos
+
     # center positions about origin
     pos -= pos.mean(0)
 
@@ -326,7 +336,7 @@ def pca(pos, return_transform=False, tranform=None):
     return pos_pca, evecs if return_transform else pos_pca
 
 
-def smart_rotate_atoms(atoms):
+def smart_rotate_atoms(atoms, opt_angle=True):
     """
     Applies "smart" rotation to atoms object
 
@@ -336,11 +346,16 @@ def smart_rotate_atoms(atoms):
     Returns:
     (ase.Atoms): new atoms object with transformed (rotated) coords
     """
+    # can only 'smart_rotate' 2 or more atoms
+    if len(atoms) < 2:
+        return atoms
+
     new_atoms = atoms.copy()
     new_atoms.positions = pca(atoms.positions.copy())
 
     # use _opt_angle to fine-tune xy-plane rotation
-    rotz = _opt_angle(new_atoms)
-    new_atoms.rotate(rotz, 'z')
+    if opt_angle:
+        rotz = _opt_angle(new_atoms)
+        new_atoms.rotate(rotz, 'z')
 
     return new_atoms
