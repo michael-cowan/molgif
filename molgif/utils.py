@@ -197,6 +197,9 @@ def _opt_angle(atom, tol=1e-6, verbose=False):
     Finds angle to rotate atoms about z-axis to:
     - maximize x and y distance of atoms
     - prioritizes x distance over y distance
+
+    When used with smart_rotate, molecule is "squared off",
+    giving a better overall presentation for some systems.
     """
     def get_dists(atom):
         return (atom.positions.max(0) - atom.positions.min(0))[:2]
@@ -223,7 +226,7 @@ def _opt_angle(atom, tol=1e-6, verbose=False):
         # return average of previous 2 angles
         if abs(score - prevscore) < tol:
             final = round((ang + prevang) / 2, 4)
-            final2 = min([final + 90, final - 90], key=lambda i: abs(i))
+            final2 = min([final + 90, final - 90], key=abs)
 
             # calculate distance with solved angle
             a = atom.copy()
@@ -236,7 +239,7 @@ def _opt_angle(atom, tol=1e-6, verbose=False):
             d2 = get_dists(a2)
 
             # return angle that maximizes X
-            angle = final if d[0] < d2[0] else final2
+            angle = final if d[0] > d[1] else final2
 
             # print number of iterations needed for optimization
             # at given tolerance (<tol>) and opt angle
@@ -336,12 +339,18 @@ def pca(pos, return_transform=False, tranform=None):
     return pos_pca, evecs if return_transform else pos_pca
 
 
-def smart_rotate_atoms(atoms, opt_angle=True):
+def smart_rotate_atoms(atoms, opt_angle=False):
     """
     Applies "smart" rotation to atoms object
 
     Args:
     atoms (ase.Atoms): atoms object to rotate
+
+    KArgs:
+    - opt_angle: Finds angle to rotate atoms about z-axis to maximize
+                 x and y distance of atoms
+                 - molecule is "squared off", which may give a better
+                   overall presentation for some systems
 
     Returns:
     (ase.Atoms): new atoms object with transformed (rotated) coords

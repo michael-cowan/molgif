@@ -907,6 +907,12 @@ class Molecule(object):
         """
         Applies "smart" rotation to molecule
         - attempts to find the best viewing angle using PCA (love this idea)
+
+        KArgs:
+        - opt_angle: Finds angle to rotate atoms about z-axis to maximize
+                     x and y distance of atoms
+                     - molecule is "squared off", which may give a better
+                       overall presentation for some systems
         """
         # TODO: correct transformation matrix from extra step
         # in new smart_rotate
