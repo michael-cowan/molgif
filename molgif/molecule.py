@@ -903,7 +903,7 @@ class Molecule(object):
             self.cb_ax = None
             self._drawn.remove('colorbar')
 
-    def smart_rotate(self, opt_angle=True):
+    def smart_rotate(self, opt_angle=False):
         """
         Applies "smart" rotation to molecule
         - attempts to find the best viewing angle using PCA (love this idea)
