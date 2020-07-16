@@ -16,7 +16,11 @@ setuptools.setup(name='molgif',
                  long_description=description,
                  long_description_content_type='text/markdown',
                  packages=setuptools.find_packages(),
+                 entry_points={
+                    'console_scripts': ['molgif=molgif.command_line:cli'],
+                 },
                  python_requires='>=2.7',
                  install_requires=['matplotlib',
                                    'pillow',
-                                   'ase>=3.17.0'])
+                                   'ase>=3.17.0',
+                                   'click'])
