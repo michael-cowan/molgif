@@ -195,7 +195,7 @@ class Molecule(object):
 
         # legend attributes (track order)
         self.legend = None
-        self.leg_order = None
+        self.leg_order = 'size'
 
         # color attributes
         self._colors = None
@@ -666,7 +666,10 @@ class Molecule(object):
                                   - can also give str of single atom type
                                   - 'size': largest to smallest
                                   - 'size_r': smallest to largest
-                                  (Default: None (alphabetical order))
+                                  - 'alpha': alphabetical order
+                                  - 'atomic': atomic number
+                                  - None: atomic number
+                                  (Default: size)
         - max_ms (int): scales legend such that largest atom type
                         is represented with markersize = <max_ms>
                         (Default: 16 pts)
@@ -685,38 +688,35 @@ class Molecule(object):
         if 'legend' in self._drawn:
             # redraw legend if different leg_order
             if (isinstance(leg_order, str) and
-               leg_order != self.leg_order and
-               leg_order is not None):
+               leg_order != self.leg_order):
                 self._drawn.remove('legend')
-                self.leg_order = leg_order
+                self.leg_order = leg_order.lower()
             elif not force:
                 return
 
-        if self.leg_order is None:
-            # default leg_order is alphabetical
-            if leg_order is None:
-                self.leg_order = 'alphabetical'
-            else:
-                # track current legend order
-                self.leg_order = leg_order
         elif leg_order is not None:
-            self.leg_order = leg_order
+            self.leg_order = leg_order.lower()
 
         # create an ordered, unique list of atom types
         symbols = sorted(set(self.atoms.symbols))
 
         # use custom legend order if given
-        if (isinstance(self.leg_order, str) and
-           self.leg_order != 'alphabetical'):
+        if isinstance(self.leg_order, str):
+            # symbols are already in alphabetical order
+            if self.leg_order == 'alpha':
+                pass
             # order legend by size
-            if self.leg_order in ['size', 'size_r']:
+            elif self.leg_order in ['size', 'size_r']:
                 symbols = sorted(
-                                symbols,
-                                key=lambda z: list(covalent_radii)[
-                                    chemical_symbols.index(z)],
-                                reverse=self.leg_order == 'size')
+                            symbols,
+                            key=lambda z: list(covalent_radii)[
+                                chemical_symbols.index(z)],
+                            reverse=self.leg_order == 'size')
+            # sort by atomic number
+            elif self.leg_order == 'number':
+                symbols = sorted(symbols, key=chemical_symbols.index)
             else:
-                raise ValueError("Unable to hangle leg_order "
+                raise ValueError("Unable to handle leg_order "
                                  "= %s" % self.leg_order)
         if isinstance(self.leg_order, list) or isinstance(self.leg_order,
                                                           np.ndarray):

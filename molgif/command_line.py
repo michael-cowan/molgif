@@ -43,9 +43,8 @@ import matplotlib.cm as cm
               help='ensure visual has 1:1 aspect ratio')
 @click.option('--legend', 'draw_legend', is_flag=True,
               help='adds an atom type legend to visual')
-@click.option('--leg-order', default=None, type=str,
-              help='Used to order the legend: size or size_r'
-                   ' [Default: alphabetical]')
+@click.option('--leg-order', default='size', show_default=True,
+              help='Used to order the legend: size, size_r, alpha, number')
 @click.option('--legend-max-ms', default=20, show_default=True,
               help='scales atoms in legend')
 @click.option('-o', '--optimize', is_flag=True,
@@ -55,8 +54,7 @@ import matplotlib.cm as cm
 @click.option('--overwrite', is_flag=True,
               help='enables new visual to overwrite previous files')
 @click.option('--use-charges', is_flag=True,
-              help='atoms are colored by initial_charges in atoms object,'
-                   ' which is defined in the 4th column of an xyz file')
+              help='atoms are colored by initial_charges in ase atoms object')
 @click.option('--colorbar', 'draw_colorbar', is_flag=True,
               help='Draws a colorbar if values are used as colors')
 @click.option('--cb-min', default=None, type=float,

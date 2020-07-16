@@ -21,7 +21,7 @@ if platform.system().lower().startswith('windows'):
 def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
             colors=None, loop_time=6, fps=20, scale=0.7, draw_bonds=True,
             rot_axis='y', anchor=None, max_px=600, square=False,
-            draw_legend=False, leg_order=None, legend_max_ms=20,
+            draw_legend=False, leg_order='size', legend_max_ms=20,
             optimize=False, transparent=False, overwrite=False,
             use_charges=False, draw_colorbar=False, cb_min=None, cb_max=None,
             cmap=cm.bwr_r, center_data=False, labels=None, label_size=None,
@@ -84,7 +84,9 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
                               - can also give str of single atom type
                               - 'size': largest to smallest
                               - 'size_r': smallest to largest
-                              (Default: None (alphabetical order))
+                              - 'alpha': (alphabetical order)
+                              - 'number': atomic number
+                              (Default: 'size')
     - legend_max_ms (int): scales legend such that largest atom type
                            is represented with markersize=<legend_max_ms>
                            (Default: 20pts)
