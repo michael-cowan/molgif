@@ -20,7 +20,7 @@ if platform.system().lower().startswith('windows'):
 
 def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
             colors=None, loop_time=6, fps=20, scale=0.7, draw_bonds=True,
-            rot_axis=rot_axis, anchor=None, max_px=600, square=False,
+            rot_axis='y', anchor=None, max_px=600, square=False,
             draw_legend=False, leg_order=None, legend_max_ms=20,
             optimize=False, transparent=False, overwrite=False,
             use_charges=False, draw_colorbar=False, cb_min=None, cb_max=None,
