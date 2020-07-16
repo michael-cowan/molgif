@@ -488,7 +488,7 @@ class Molecule(object):
         if 'atoms' not in self._drawn:
             self._drawn.append('atoms')
 
-    def draw_bonds(self, bond_color='white', bond_edgecolor='k',
+    def draw_bonds(self, bond_color=None, bond_edgecolor=None,
                    recalc_bonds=None, force=False):
         """
         Draw bonds or update bond positions
@@ -510,10 +510,11 @@ class Molecule(object):
         update = bool(len(self.bond_objs))
 
         # if new bond colors, force a redraw
-        if self.bond_color != bond_color:
+        if self.bond_color != bond_color and bond_color is not None:
             self.bond_color = bond_color
             force = True
-        if self.bond_edgecolor != bond_edgecolor:
+        if (self.bond_edgecolor != bond_edgecolor and
+           bond_edgecolor is not None):
             self.bond_edgecolor = bond_edgecolor
             force = True
 
