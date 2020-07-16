@@ -187,6 +187,10 @@ class Molecule(object):
         # default label size: 15
         self._label_size = 15
 
+        # flags used to block drawing colorbar and legend when not applicable
+        self.block_colorbar = False
+        self.block_legend = False
+
         self._check_labels(labels)
 
         # legend attributes (track order)
@@ -262,9 +266,9 @@ class Molecule(object):
 
     @label_size.setter
     def label_size(self, value):
-        if isinstance(value, str):
+        if isinstance(value, str) and not value.isdigit():
             value = value.lower()
-            if re.match('(x{0,2}-)?(small|large)') or value == 'medium':
+            if re.match('(x{0,2}-)?(small|large)', value) or value == 'medium':
                 self._label_size = value
         else:
             try:
@@ -1025,10 +1029,10 @@ class Molecule(object):
             raise TypeError('init_fig must first be called')
 
     def save(self, path=None, overwrite=False, max_px=600, transparent=False,
-             optimize=False):
+             optimize=False, quiet=False):
         """
         Save the current figure
-        - if saving as *.png, method attempts to optimize image
+        - default = *.png
         - can save as *.svg vector graphic
         - supports all extensions supported by plt.Figure.savefig
 
@@ -1049,7 +1053,13 @@ class Molecule(object):
         - optimize (bool): optimizes png if no colorbar is drawn
                            - NOTE: could result in some loss of quality
                            (Default: False)
+        - quiet (bool): if True, supress output to console
         """
+        # inform user of attempt to save
+        if not quiet:
+            print('Saving %s...' % path, end='\r')
+
+        # calculate dpi based on max_px and 5" max dimension of mpl figure
         dpi = max_px / 5
 
         if path is None:
@@ -1059,6 +1069,7 @@ class Molecule(object):
 
         if not overwrite:
             path = utils.avoid_overwrite(path)
+
 
         if (optimize and
            path.endswith('.png') and
@@ -1079,6 +1090,10 @@ class Molecule(object):
             im2.save(path, optimize=True)
         else:
             self.fig.savefig(path, transparent=transparent, dpi=dpi)
+
+        # inform user of successful save
+        if not quiet:
+            print('Successfully saved: %s' % path)
 
     def update(self, force=False, recalc_bonds=None, redraw=None):
         """
@@ -1206,7 +1221,7 @@ class Molecule(object):
                 print('   Saving frame: %03i' % (i + 1), end='\r')
                 self.save(os.path.join(frame_path,
                                        self.name + '_%03i.png' % (i + 1)),
-                          max_px=max_px, optimize=optimize_gif)
+                          max_px=max_px, optimize=optimize_gif, quiet=True)
                 self.rotate(rot)
         # else make gif with matplotlib.animation and image magick
         else:
@@ -1436,7 +1451,8 @@ class Molecule(object):
                     self._labels = list(self._cb_values)
                 # atomic charges
                 elif value == 'charges':
-                    self._labels = list(self.atoms.get_initial_charges())
+                    self._labels = [round(i, 2)
+                                    for i in self.atoms.get_initial_charges()]
                 else:
                     print('"%s" not supported for labels' % value)
             elif len(value) == len(self.atoms):
