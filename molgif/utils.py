@@ -192,6 +192,75 @@ def get_fig_bounds(atoms, rot_axis=None, square=False,
     return fig_size, xlim, ylim
 
 
+def _opt_angle(atom, tol=1e-6, verbose=False):
+    """
+    Finds angle to rotate atoms about z-axis to:
+    - maximize x and y distance of atoms
+    - prioritizes x distance over y distance
+
+    When used with smart_rotate, molecule is "squared off",
+    giving a better overall presentation for some systems.
+    """
+    def get_dists(atom):
+        return (atom.positions.max(0) - atom.positions.min(0))[:2]
+
+    atom = atom.copy()
+
+    # angle increment
+    inc = 2
+
+    prevang = inc
+    ang = inc
+    test_atom = atom.copy()
+    converged = False
+    prevscore = np.product(get_dists(atom))
+    count = 0
+    while 1:
+        # rotate test_atom by current increment
+        test_atom.rotate(inc, 'z')
+
+        # calculate current score (product of x and y dists)
+        score = np.product(get_dists(test_atom))
+
+        # if score has converged (abs(change) is less than <tol>),
+        # return average of previous 2 angles
+        if abs(score - prevscore) < tol:
+            final = round((ang + prevang) / 2, 4)
+            final2 = min([final + 90, final - 90], key=abs)
+
+            # calculate distance with solved angle
+            a = atom.copy()
+            a.rotate(final, 'z')
+            d = get_dists(a)
+
+            # calculate distance with solved angle + 90 degree rotation
+            a2 = atom.copy()
+            a2.rotate(final2, 'z')
+            d2 = get_dists(a2)
+
+            # return angle that maximizes X
+            angle = final if d[0] > d[1] else final2
+
+            # print number of iterations needed for optimization
+            # at given tolerance (<tol>) and opt angle
+            if verbose:
+                print('TOLERANCE: %.2e' % tol)
+                print(' OPT TOOK: %i iterations!' % count)
+                print('OPT ANGLE: %.2f deg.' % angle)
+
+            return angle
+
+        # if rotated too far, reverse and half increment
+        if (score > prevscore).all():
+            inc *= (-1/2.)
+
+        # print(ang)
+        prevang = ang
+        ang += inc
+        prevscore = score
+        count += 1
+
+
 def path2atoms(path):
     """
     Checks to see if path can be read in as an ase.Atoms object
@@ -232,6 +301,13 @@ def pca(pos, return_transform=False, tranform=None):
                             - transforms new positions from different PCA
                             (Default: None)
     """
+    # can only apply pca to 2 or more atoms
+    if pos.shape[0] == 1:
+        if return_transform:
+            return pos, np.eye(3)
+
+        return pos
+
     # center positions about origin
     pos -= pos.mean(0)
 
@@ -241,10 +317,11 @@ def pca(pos, return_transform=False, tranform=None):
 
     # covariance = (x.T * x) / (n - 1)
     # do not need to subtract off mean since data is centered
-    co = np.dot(pos.T, pos) / (len(pos) - 1)
+    # co = np.dot(pos.T, pos) / (len(pos) - 1)
+    co = np.cov(pos, rowvar=False)
 
     # find eigenvalues and eigenvectors
-    evals, evecs = np.linalg.eig(co)
+    evals, evecs = np.linalg.eigh(co)
 
     # sort evals
     indices = evals.argsort()[::-1]
@@ -262,16 +339,32 @@ def pca(pos, return_transform=False, tranform=None):
     return pos_pca, evecs if return_transform else pos_pca
 
 
-def smart_rotate_atoms(atoms):
+def smart_rotate_atoms(atoms, opt_angle=False):
     """
     Applies "smart" rotation to atoms object
 
     Args:
     atoms (ase.Atoms): atoms object to rotate
 
+    KArgs:
+    - opt_angle: Finds angle to rotate atoms about z-axis to maximize
+                 x and y distance of atoms
+                 - molecule is "squared off", which may give a better
+                   overall presentation for some systems
+
     Returns:
     (ase.Atoms): new atoms object with transformed (rotated) coords
     """
+    # can only 'smart_rotate' 2 or more atoms
+    if len(atoms) < 2:
+        return atoms
+
     new_atoms = atoms.copy()
     new_atoms.positions = pca(atoms.positions.copy())
+
+    # use _opt_angle to fine-tune xy-plane rotation
+    if opt_angle:
+        rotz = _opt_angle(new_atoms)
+        new_atoms.rotate(rotz, 'z')
+
     return new_atoms

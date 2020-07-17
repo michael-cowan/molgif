@@ -18,14 +18,14 @@ if platform.system().lower().startswith('windows'):
         anim.rcParams['animation.convert_path'] = 'magick'
 
 
-def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
-            scale=0.7, draw_bonds=True, smart_rotate=False,
-            anchor=None, rot_axis='y', draw_legend=False, colors=None,
-            center_data=False, draw_colorbar=False, cb_min=None, cb_max=None,
-            cmap=cm.bwr_r, use_charges=False, max_px=600,
-            leg_order=None, legend_max_ms=20, labels=None, bond_color='white',
-            bond_edgecolor='k', square=False, save_frames=False,
-            optimize_gif=False, transparent=False):
+def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
+            colors=None, loop_time=6, fps=20, scale=0.7, draw_bonds=True,
+            rot_axis='y', anchor=None, max_px=600, square=False,
+            draw_legend=False, leg_order='size', legend_max_ms=20,
+            optimize=False, transparent=False, overwrite=False,
+            use_charges=False, draw_colorbar=False, cb_min=None, cb_max=None,
+            cmap=cm.bwr_r, center_data=False, labels=None, label_size=None,
+            bond_color='white', bond_edgecolor='black', save_frames=False):
     """
     Creates a rotating animation .gif of a molecule from
     an ase.Atoms object or a geometry file
@@ -39,33 +39,14 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
     - save_path (str): path to save gif - if None, chem formula and gif info
                        are used
                        (Default: '' -> "<chem formula>-GIF-INFO.gif")
-    - overwrite (bool): if False, '-<integer>' is added to end of name
-                        to avoid overwriting
-                        (Default: False)
-    - loop_time (int): number of seconds for atoms to complete one rotation
-                       (Default: 6)
-    - fps (int): frames per second of animation
-                 (Default: 20)
-    - scale (float): scales size of atoms: scale * ase.data.covalent_radii
-                     (Default: 0.9)
-    - draw_bonds (bool): if True, bonds are drawn
-                        (Default: True)
+    - img (bool): if True, saves a png image instead of a gif
+                  (Default: False)
+    - vis (bool): if True, display molecule as a matplotlib figure window
+                  - does not save any new files
+                  (Default: False)
     - smart_rotate (bool): if True, PCA is applied to coords to orient atoms
                            such that max variance is in x-axis
                            (Default: False)
-    - anchor (int): if given, atoms[anchor] will be set to the origin
-                    so all other atoms rotate around it while it remains
-                    stationary
-                    (Default: None)
-    - rot_axis (str): specify axis to rotate about
-                      - x (left-to-right), y (bot-to-top), or
-                        z (counter-clockwise)
-                      - can be: 'y' | 'x' | 'z',
-                      - can also add a '-' to change direction!
-                      e.g. '-z' causes clockwise rotation
-                      (Default: 'y')
-    - draw_legend (bool): if True, a legend specifying atom types is added
-                         (Default: False)
     - colors (str | iterable | dict): specify atom colors with str, dict,
                                       or values which will use the cmap
                                       - 'blue': all atoms blue
@@ -74,9 +55,57 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
                                       - {'Au': 'purple'}: use dict to color by
                                         by atom type - types not given use jmol
                                       (Default: None -> jmol colors used)
-    - center_data (bool): if True, colors are centered about middle of cmap
-                          - ensures (-) and (+) values are different color
-                          - ex) for RdBu cmap, 0 = 'white'
+    - loop_time (int): number of seconds for atoms to complete one rotation
+                       (Default: 6)
+    - fps (int): frames per second of animation
+                 (Default: 20)
+    - scale (float): scales size of atoms: scale * ase.data.covalent_radii
+                     (Default: 0.7)
+    - draw_bonds (bool): if True, bonds are drawn
+                        (Default: True)
+    - rot_axis (str): specify axis to rotate about
+                      - x (top-to-bot), y (left-to-right), or
+                        z (counterclockwise)
+                      - can be: 'y' | 'x' | 'z',
+                      - can also add a '-' to change direction!
+                      e.g. '-z' causes clockwise rotation
+                      (Default: 'y')
+    - anchor (int | str): if given, atoms[anchor] will be set to the origin
+                          so all other atoms rotate around it while it remains
+                          stationary
+                          - int: index of atom to anchor
+                          - "center": chooses closest atom to COP
+                          - chem symbol: chooses first instance
+                                         (based on index order)
+                                         of atom type = <chem symbol>
+                          (Default: None)
+    - max_px (int): sets pixel count for longest dimension in gif image
+                    (Default: 600)
+    - square (bool): if True, gif will be saved with square dimensions
+                     (Default: False)
+    - draw_legend (bool): if True, a legend specifying atom types is added
+                         (Default: False)
+    - leg_order (list | str): if given, use it to order the legend
+                              - can also give str of single atom type
+                              - 'size': largest to smallest
+                              - 'size_r': smallest to largest
+                              - 'alpha': (alphabetical order)
+                              - 'number': atomic number
+                              (Default: 'size')
+    - legend_max_ms (int): scales legend such that largest atom type
+                           is represented with markersize=<legend_max_ms>
+                           (Default: 20pts)
+    - optimize (bool): if True, creates optimized visual (~1/2 file size)
+                       - experimental; still needs additional testing
+                       - NOTE: gif takes much longer to make
+                       (Default: False)
+    - transparent (bool): if True, images are saved as transparent images
+                          - Does not affect gifs
+                          (Default: False)
+    - overwrite (bool): if False, '-<integer>' is added to end of name
+                        to avoid overwriting
+                        (Default: False)
+    - use_charges (bool): if True, colored by initial_charges in atoms obj
                           (Default: False)
     - draw_colorbar (bool): Draws a colorbar if values are given in <colors>
                             (Default: False)
@@ -86,18 +115,10 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
                       (Default: calc based on values)
     - cmap (ColorMap): cmap to be used if colors is specified
                        (Default: matplotlib.cm.bwr_r)
-    - use_charges (bool): if True, colored by initial_charges in atoms obj
+    - center_data (bool): if True, colors are centered about middle of cmap
+                          - ensures (-) and (+) values are different color
+                          - ex) for RdBu cmap, 0 = 'white'
                           (Default: False)
-    - max_px (int): sets pixel count for longest dimension in gif image
-                    (Default: 600)
-    - leg_order (list | str): if given, use it to order the legend
-                              - can also give str of single atom type
-                              - 'size': largest to smallest
-                              - 'size_r': smallest to largest
-                              (Default: None (alphabetical order))
-    - legend_max_ms (int): scales legend such that largest atom type
-                           is represented with markersize=<legend_max_ms>
-                           (Default: 20pts)
     - labels (str | iterable): type or list of labels to add to atoms
                                - 'symbols': uses chemical symbol
                                - 'symbols-noh': same as symbols, but no H
@@ -105,31 +126,24 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
                                - 'charges': uses initial_charges from atoms
                                - [lab1, lab2, ...]
                                (Default: None)
+    - label_size (int): size of labels
     - bond_color (str): specify color of bonds
                         (Default: white)
     - bond_edgecolor (str): specify edgecolor (border) of bonds
                             (Default: black)
-    - square (bool): if True, gif will be saved with square dimensions
-                     (Default: False)
     - save_frames (bool): if True, folder is made - frames saved as pngs
                           - NOTE: won't make a gif
                           (Default: False)
-    - optimize_gif (bool): if True, creates optimized gif (~1/2 file size)
-                           - experimental; still needs additional testing
-                           - NOTE: gif takes much longer to make
-                           (Default: False)
-    - transparent (bool): if True, frames are saved as transparent images
-                          (Defulat: True)
     """
     # use utils function to handle str to geometry path
     atoms = utils.path2atoms(atoms)
     atoms = atoms.copy()
 
-    # color atoms based on charge
+    # color atoms based on charge (also centers color scheme around 0)
     if use_charges:
         colors = atoms.get_initial_charges().copy()
         center_data = True
-        draw_colorbar = True
+        # draw_colorbar = True
 
     # build figure object
     molecule = Molecule(atoms, scale=scale, colors=colors,
@@ -145,6 +159,10 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
     if smart_rotate:
         molecule.smart_rotate()
 
+    # define label size if given
+    if label_size is not None:
+        molecule.label_size = label_size
+
     # draw objects
     molecule.draw_atoms()
     if draw_bonds:
@@ -156,7 +174,28 @@ def rot_gif(atoms, save_path=None, overwrite=False, loop_time=6, fps=20,
     if draw_colorbar:
         molecule.draw_colorbar()
 
+    # turn on img flag if save_path ends with png or svg extension
+    if save_path is not None and save_path[-3:].lower() in ['png', 'svg']:
+        img = True
+
+    # do not create gif if vis or img flag is true
+    if vis or img:
+        # only open matplotlib interactive plot if vis
+        if vis:
+            molecule.show()
+        # if img, only save an img
+        if img:
+            # if no path given, create one with molecular formula (name)
+            if save_path is None:
+                save_path = molecule.name + '.png'
+
+            # else remove gif extension and replace with png
+            elif save_path.endswith('.gif'):
+                save_path = save_path.strip('.gif') + '.png'
+            molecule.save(save_path, overwrite, max_px, transparent, optimize)
+        return
+
     # create and save rotation gif
     molecule.save_rot_gif(path=save_path, fps=fps, loop_time=loop_time,
                           max_px=max_px, save_frames=save_frames,
-                          overwrite=overwrite, optimize_gif=optimize_gif)
+                          overwrite=overwrite, optimize_gif=optimize)
