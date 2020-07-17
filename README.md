@@ -62,7 +62,7 @@ c4h4o.rotate(60, 'z')
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz
+    root@host:~$ molgif c4h4o.xyz
     ```
 
 ![c4h4o](gifs/C4H4O.gif)
@@ -90,7 +90,7 @@ c4h4o.rotate(60, 'z')
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --smart-rotate --legend
+    root@host:~$ molgif c4h4o.xyz --smart-rotate --legend
     ```
 
 ![c4h4o-1](gifs/C4H4O-1.gif)
@@ -125,16 +125,17 @@ colors = rainbow
     ```
 
 - **Scripting**
+
     Specify single color
 
     ```console
-    user:~$ molgif c4h4o.xyz --colors yellow
+    root@host:~$ molgif c4h4o.xyz --colors yellow
     ```
 
     Separate multiple colors using "-" (length must match # atoms)
 
     ```console
-    user:~$ molgif c4h4o.xyz --colors r-orange-yellow-g-b-violet-r-orange-yellow
+    root@host:~$ molgif c4h4o.xyz --colors r-orange-yellow-g-b-violet-r-orange-yellow
     ```
 
 ![c4h4o-2](gifs/C4H4O-2.gif)
@@ -160,10 +161,11 @@ Default colors will be used for types not specified
     ```
 
 - **Scripting**
+
     Color dict can be defined as *(symbol-color)-* pairs
 
     ```console
-    user:~$ molgif c4h4o.xyz --colors C-hotpink-O-dodgerblue --legend
+    root@host:~$ molgif c4h4o.xyz --colors C-hotpink-O-dodgerblue --legend
     ```
 
 ![c4h4o-3](gifs/C4H4O-3.gif)
@@ -203,7 +205,7 @@ colors[anchor] = '#0892d0'
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --anchor 3 --colors w-w-w-#0892d0-w-w-w-w-w
+    root@host:~$ molgif c4h4o.xyz --anchor 3 --colors w-w-w-#0892d0-w-w-w-w-w
     ```
 
 ![c4h4o-4](gifs/C4H4O-4.gif)
@@ -227,7 +229,7 @@ loop_time = time to complete one rotation (seconds)
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --loop-time 2 --fps 60
+    root@host:~$ molgif c4h4o.xyz --loop-time 2 --fps 60
     ```
 
 ![c4h4o-5](gifs/C4H4O-5.gif)
@@ -253,7 +255,7 @@ loop_time = time to complete one rotation (seconds)
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --no-bonds --scale 0.9
+    root@host:~$ molgif c4h4o.xyz --no-bonds --scale 0.9
     ```
 
 ![c4h4o-6](gifs/C4H4O-6.gif)
@@ -283,7 +285,7 @@ Examples changing to 'x':
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --rot-axis x
+    root@host:~$ molgif c4h4o.xyz --rot-axis x
     ```
 
 ![c4h4o-7](gifs/C4H4O-7.gif)
@@ -309,7 +311,7 @@ negative rot_axis (e.g. "-x") reverses direction
 - **Scripting**
 
     ```console
-    user:~$ molgif c4h4o.xyz --rot-axis -x
+    root@host:~$ molgif c4h4o.xyz --rot-axis -x
     ```
 
 ![c4h4o-8](gifs/C4H4O-8.gif)
@@ -330,6 +332,7 @@ atoms.write('c4h4o.xyz')
 ```
 
 - **Functional**
+
 Use charges automatically centers cmap around 0
 
     ```python
@@ -337,6 +340,7 @@ Use charges automatically centers cmap around 0
     ```
 
 - **Object-oriented**
+
 Colors can be defined as values, which uses a cmap to specify atom colors
 
     ```python
@@ -350,10 +354,11 @@ Colors can be defined as values, which uses a cmap to specify atom colors
     ```
 
 - **Scripting**
+
 Assumes that initial_charges are defined in xyz file (using ase)
 
     ```console
-    user:~$ molgif c4h4o.xyz --use-charges
+    root@host:~$ molgif c4h4o.xyz --use-charges
     ```
 
 ![c4h4o-9](gifs/C4H4O-9.gif)
