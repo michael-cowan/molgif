@@ -23,9 +23,13 @@ import matplotlib.animation as anim
 
 # ensure that ImageMagick writer is found (and not Windows' convert.exe)
 if platform.system().lower().startswith('windows'):
-    if anim.rcParams['animation.convert_path'].endswith(('convert',
-                                                        'convert.exe')):
-        anim.rcParams['animation.convert_path'] = 'magick'
+    if 'rcParams' in anim.__dir__():
+        rc = anim.rcParams
+    else:
+        rc = matplotlib.rcParams
+
+    if rc['animation.convert_path'].endswith(('convert', 'convert.exe')):
+        rc['animation.convert_path'] = 'magick'
 
 
 class Molecule(object):
