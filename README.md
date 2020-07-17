@@ -213,6 +213,7 @@ colors[anchor] = '#0892d0'
 ### Adjust loop time and FPS
 
 loop_time = time to complete one rotation (seconds)
+
 - **Functional**
 
     ```python
@@ -333,7 +334,7 @@ atoms.write('c4h4o.xyz')
 
 - **Functional**
 
-Use charges automatically centers cmap around 0
+    Use charges automatically centers cmap around 0
 
     ```python
     molgif.rot_gif(atoms, max_px=max_px, use_charges=True)
@@ -341,7 +342,7 @@ Use charges automatically centers cmap around 0
 
 - **Object-oriented**
 
-Colors can be defined as values, which uses a cmap to specify atom colors
+    Colors can be defined as values, which uses a cmap to specify atom colors
 
     ```python
     mol = molgif.Molecule(c4h4o)
@@ -355,7 +356,7 @@ Colors can be defined as values, which uses a cmap to specify atom colors
 
 - **Scripting**
 
-Assumes that initial_charges are defined in xyz file (using ase)
+    Assumes that initial_charges are defined in xyz file (using ase)
 
     ```console
     root@host:~$ molgif c4h4o.xyz --use-charges
