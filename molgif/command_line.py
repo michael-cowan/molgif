@@ -1,6 +1,7 @@
 import click
 from molgif.gifmaker import rot_gif
 from molgif._version import __version__
+from ase.data import chemical_symbols
 import matplotlib.cm as cm
 
 
@@ -98,7 +99,14 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
     # if - is used, convert atom type colors to dict
     if colors is not None and '-' in colors:
         c = colors.split('-')
-        colors = {k: v for k, v in zip(c[::2], c[1::2])}
+
+        # if chemical symbols given, assume dictionary
+        if all(s in chemical_symbols for s in c[::2]):
+            colors = {k: v for k, v in zip(c[::2], c[1::2])}
+
+        # else assume list of colors
+        else:
+            colors = c
 
     # if cmap str is given, ensure that it exists as a cmap
     # if not, default to bwr_r cmap (used when cmap = None)
