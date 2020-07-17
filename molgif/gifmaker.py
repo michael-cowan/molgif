@@ -64,8 +64,8 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
     - draw_bonds (bool): if True, bonds are drawn
                         (Default: True)
     - rot_axis (str): specify axis to rotate about
-                      - x (left-to-right), y (bot-to-top), or
-                        z (counter-clockwise)
+                      - x (top-to-bot), y (left-to-right), or
+                        z (counterclockwise)
                       - can be: 'y' | 'x' | 'z',
                       - can also add a '-' to change direction!
                       e.g. '-z' causes clockwise rotation
