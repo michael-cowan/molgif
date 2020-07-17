@@ -964,7 +964,7 @@ class Molecule(object):
                 self.atoms.positions -= list(i)
             else:
                 raise ValueError('not cartesian coordinates')
-        except ValueError:
+        except Exception:
             if isinstance(i, str):
                 if i.title() in self.atoms.symbols:
                     i = np.where(self.atoms.symbols == i.title())[0][0]
