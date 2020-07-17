@@ -35,8 +35,12 @@ import matplotlib.cm as cm
                    ' x (left-to-right), y (bot-to-top), or z (ccw);'
                    ' can also add a "-" to change direction!')
 @click.option('--anchor', default=None,
-              help='define atom (index or symbol) to anchor to center such'
-                   'that all other atoms rotate around it')
+              help='define atom to anchor to center such'
+                   'that all other atoms rotate around it\n\n'
+                   '- index: index of atom to anchor\n\n'
+                   '- "center": closest to center of position is anchored\n\n'
+                   '- chem-symbol: first atom type found with that symbol'
+                   ' (based on index order) is anchored')
 @click.option('--max-px', default=600, show_default=True,
               help='sets pixel count for longest dimension in visual')
 @click.option('--square', is_flag=True,
@@ -64,12 +68,12 @@ import matplotlib.cm as cm
 @click.option('--cmap', default='bwr_r', show_default=True,
               help='matplotlib cmap to be used if values are used for colors')
 @click.option('--center-data', is_flag=True,
-              help='colors are centered about middle of cmap'
-                   'when using values as colors')
+              help='colors are centered about middle of cmap when using values'
+                   ' as colors')
 @click.option('--labels', default=None, type=str,
               help='define labels to add to atoms'
-                   ' - symbols, symbols-noh, values (from colors option),'
-                   ' or charges (see "--use-charges")'
+                   ' - "symbols", "symbols-noh", "values" (from colors option),'
+                   ' or "charges" (see --use-charges)'
                    '[Default: No labels]')
 @click.option('--label-size', default=None, help='set size of labels')
 @click.option('--bond-color', default='white', show_default=True,

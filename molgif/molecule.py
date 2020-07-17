@@ -898,6 +898,7 @@ class Molecule(object):
             self.legend.remove()
             self.legend = None
             self._drawn.remove('legend')
+            self.init_fig()
 
     def remove_colorbar(self):
         """
@@ -907,6 +908,7 @@ class Molecule(object):
             self.fig.delaxes(self.cb_ax)
             self.cb_ax = None
             self._drawn.remove('colorbar')
+            self.init_fig()
 
     def smart_rotate(self, opt_angle=False):
         """
@@ -953,6 +955,7 @@ class Molecule(object):
 
         Args:
         - i (str): atom element to anchor - matches first element in list
+        - i == 'center': closest atom to center of position (COP)
         - i (int): index of atom that should be translated to origin
         - i (list): cartesian coordinates that should be translated to origin
         """
@@ -961,12 +964,27 @@ class Molecule(object):
                 self.atoms.positions -= list(i)
             else:
                 raise ValueError('not cartesian coordinates')
-        except:
-            if isinstance(i, str) and i.title() in self.atoms.symbols:
+        except ValueError:
+            if isinstance(i, str):
+                if i.title() in self.atoms.symbols:
                     i = np.where(self.atoms.symbols == i.title())[0][0]
+                elif i.lower() == 'center':
+                    # ensure that molecule's center of position is at origin
+                    self.atoms.positions -= self.atoms.positions.mean(0)
+
+                    # don't need to square root since order won't change
+                    dists = (self.atoms.positions**2).sum(1)
+
+                    # find closest atom to COP
+                    i = np.where(dists == dists.min())[0][0]
 
             if 0 <= i < len(self):
+                # store index of anchored atom
+                self.anchored_atom = i
+
+                # shift anchored atom to origin
                 self.atoms.positions -= self.atoms[i].position
+
                 # recalculate axis boundaries
                 self.init_fig()
                 self.add_param('anchor')
@@ -1002,7 +1020,7 @@ class Molecule(object):
             self.atoms.rotate(angle, v=self.rot_axis,
                               center=(0, 0, 0))
             self.update()
-        except:
+        except Exception:
             print("Unable to rotate - make sure angle "
                   "and rot_axis (if given) are valid")
 
@@ -1070,7 +1088,6 @@ class Molecule(object):
 
         if not overwrite:
             path = utils.avoid_overwrite(path)
-
 
         if (optimize and
            path.endswith('.png') and
@@ -1332,8 +1349,7 @@ class Molecule(object):
         failed = True
 
         if str(value).lower() == 'random':
-            self._colors = [[random.random() for i in range(3)]
-                            for j in range(len(self))]
+            self._colors = list(np.random.random((len(self), 3)))
             failed = False
             self.block_legend = True
         # resort to default colors
@@ -1399,7 +1415,7 @@ class Molecule(object):
                 self.block_colorbar = False
                 failed = False
             # else see if list contains strings
-            except:
+            except ValueError:
                 # if length is the same, try to convert items to valid colors
                 if len(value) == len(self):
                     try:

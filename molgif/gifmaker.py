@@ -73,6 +73,11 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
     - anchor (int | str): if given, atoms[anchor] will be set to the origin
                           so all other atoms rotate around it while it remains
                           stationary
+                          - int: index of atom to anchor
+                          - "center": chooses closest atom to COP
+                          - chem symbol: chooses first instance
+                                         (based on index order)
+                                         of atom type = <chem symbol>
                           (Default: None)
     - max_px (int): sets pixel count for longest dimension in gif image
                     (Default: 600)
@@ -134,10 +139,10 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
     atoms = utils.path2atoms(atoms)
     atoms = atoms.copy()
 
-    # color atoms based on charge
+    # color atoms based on charge (also centers color scheme around 0)
     if use_charges:
         colors = atoms.get_initial_charges().copy()
-        # center_data = True
+        center_data = True
         # draw_colorbar = True
 
     # build figure object
