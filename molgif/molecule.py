@@ -310,9 +310,9 @@ class Molecule(object):
         - figure dimensions are adjusted based on rot_axis
         OPTIONS:
         - None: draw figure based only on current view
-        - x (left-to-right)
-        - y (bot-to-top)
-        - z (counter-clockwise)
+        - x (top-to-bot)
+        - y (left-to-right)
+        - z (counterclockwise)
         - can also add a '-' to change direction!
           e.g. '-z' causes clockwise rotation
         """
@@ -968,6 +968,8 @@ class Molecule(object):
             if isinstance(i, str):
                 if i.title() in self.atoms.symbols:
                     i = np.where(self.atoms.symbols == i.title())[0][0]
+                elif i.isdigit():
+                    i = int(i)
                 elif i.lower() == 'center':
                     # ensure that molecule's center of position is at origin
                     self.atoms.positions -= self.atoms.positions.mean(0)
