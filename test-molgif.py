@@ -34,7 +34,7 @@ Use smart_rotate to find best viewing angle and add a legend
 molgif.rot_gif(atoms, max_px=max_px, smart_rotate=True,
                draw_legend=True)
 
-# can also smart_rotate atoms object using pca in utils
+# can also smart_rotate atoms object from function in utils
 atoms = molgif.utils.smart_rotate_atoms(atoms)
 
 """
@@ -54,12 +54,11 @@ molgif.rot_gif(atoms, max_px=max_px, colors=rainbow)
 Use a dictionary to quickly color by atom type
 """
 
-# specify legend to order by atom size
-leg_order = 'size'
+colors = {'C': 'hotpink', 'O': 'dodgerblue'}
 
 # default colors will be used for types not specified
 molgif.rot_gif(atoms, max_px=max_px, draw_legend=True,
-               leg_order=leg_order, colors=dict(C='hotpink'))
+               colors=colors)
 
 """
 Anchor an atom to be at the center of rotation
