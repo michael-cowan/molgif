@@ -7,15 +7,20 @@ import re
 import subprocess
 import platform
 import ase.io
+import matplotlib
 import matplotlib.cm as cm
 import matplotlib.animation as anim
 import matplotlib.pyplot as plt
 
 # ensure that ImageMagick writer is found (and not Windows' convert.exe)
 if platform.system().lower().startswith('windows'):
-    if anim.rcParams['animation.convert_path'].endswith(('convert',
-                                                        'convert.exe')):
-        anim.rcParams['animation.convert_path'] = 'magick'
+    if 'rcParams' in anim.__dir__():
+        rc = anim.rcParams
+    else:
+        rc = matplotlib.rcParams
+
+    if rc['animation.convert_path'].endswith(('convert', 'convert.exe')):
+        rc['animation.convert_path'] = 'magick'
 
 
 def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
