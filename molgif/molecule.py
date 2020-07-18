@@ -937,6 +937,27 @@ class Molecule(object):
         # redraw figure
         self.redraw()
 
+    def custom_rotate(self, rot_commands):
+        """
+        Applies an ordered list of rotation commands to molecule
+        - list should have the form [angle1, x|y|z, angle2, x|y|z, ...]
+        - rotations are applied sequentially and different orders will lead
+          to different results
+
+        Args:
+        - rot_commands (list): list of ordered rotation commands to apply
+                               - [angle, (x|y|z), angle, (x|y|z), ...]
+        """
+        # store current rotation axis
+        rot_axis = self.rot_axis
+
+        # apply the rotations sequentially
+        for angle, axis in zip(rot_commands[::2], rot_commands[1::2]):
+            self.rotate(angle, axis)
+
+        # set rotation axis back to original
+        self.rot_axis = rot_axis
+
     def add_param(self, value):
         if value not in self.fig_params:
             self.fig_params.append(value)
@@ -1023,7 +1044,7 @@ class Molecule(object):
             self.rot_axis = 'y'
 
         try:
-            self.atoms.rotate(angle, v=self.rot_axis,
+            self.atoms.rotate(float(angle), v=self.rot_axis,
                               center=(0, 0, 0))
             self.update()
         except Exception:

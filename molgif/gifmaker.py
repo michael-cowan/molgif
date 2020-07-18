@@ -25,12 +25,13 @@ if platform.system().lower().startswith('windows'):
 
 def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
             colors=None, loop_time=6, fps=20, scale=0.7, draw_bonds=True,
-            rot_axis='y', anchor=None, max_px=600, square=False,
-            draw_legend=False, leg_order='size', legend_max_ms=20,
-            optimize=False, transparent=False, overwrite=False,
-            use_charges=False, draw_colorbar=False, cb_min=None, cb_max=None,
-            cmap=cm.bwr_r, center_data=False, labels=None, label_size=None,
-            bond_color='white', bond_edgecolor='black', save_frames=False):
+            custom_rotate=None, rot_axis='y', anchor=None, max_px=600,
+            square=False, draw_legend=False, leg_order='size',
+            legend_max_ms=20, optimize=False, transparent=False,
+            overwrite=False, use_charges=False, draw_colorbar=False,
+            cb_min=None, cb_max=None, cmap=cm.bwr_r, center_data=False,
+            labels=None, label_size=None, bond_color='white',
+            bond_edgecolor='black', save_frames=False):
     """
     Creates a rotating animation .gif of a molecule from
     an ase.Atoms object or a geometry file
@@ -68,6 +69,9 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
                      (Default: 0.7)
     - draw_bonds (bool): if True, bonds are drawn
                         (Default: True)
+    - custom_rotate (list): list of ordered rotation commands to apply
+                            - [angle, (x|y|z), angle, (x|y|z), ...]
+                            - Always occurs AFTER smart_rotate
     - rot_axis (str): specify axis to rotate about
                       - x (top-to-bot), y (left-to-right), or
                         z (counterclockwise)
@@ -163,6 +167,9 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
 
     if smart_rotate:
         molecule.smart_rotate()
+
+    if custom_rotate is not None:
+        molecule.custom_rotate(custom_rotate)
 
     # define label size if given
     if label_size is not None:

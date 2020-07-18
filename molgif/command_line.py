@@ -9,48 +9,53 @@ import matplotlib.cm as cm
                context_settings=dict(help_option_names=['-h', '--help']))
 @click.version_option(__version__)
 @click.argument('atoms')
-@click.option('-p', '--save-path', default=None, type=str,
+@click.option('-p', '--save-path', default=None, type=str, metavar='<s>',
               help='path to save visual - based on extension:'
                    ' .gif = animation, .png or .svg = image'
-                   ' [Default: chem formula and gif info]')
+                   ' [default: chem formula and gif info]')
 @click.option('-i', '--img', is_flag=True, help='save png instead of gif')
 @click.option('-v', '--vis', is_flag=True,
               help='opens visual of molecule - does not save new files')
 @click.option('-r', '--smart-rotate', is_flag=True,
               help='orients atoms such that max variance is in x-axis')
-@click.option('-c', '--colors', default=None, type=str,
+@click.option('-c', '--colors', default=None, type=str, metavar='<s>',
               help='specify atom colors or colors of specific atom types\n\n'
                    '-c blue = all atoms are blue\n\n'
                    '-c C-blue-H-green = C are blue, H are green\n\n'
-                   '[Default: jmol colors]')
+                   '[default: jmol colors]')
 @click.option('-t', '--loop-time', default=6, type=float, show_default=True,
+              metavar='<f>',
               help='number of seconds for atoms to complete one rotation')
-@click.option('-f', '--fps', default=20, show_default=True,
+@click.option('-f', '--fps', default=20, show_default=True, metavar='<i>',
               help='define frames per second of gif')
-@click.option('--scale', default=0.7, show_default=True,
+@click.option('--scale', default=0.7, show_default=True, metavar='<f>',
               help='scales size of atoms: scale * covalent radii')
 @click.option('--no-bonds', is_flag=True,
               help='removes bond from visual')
-@click.option('--rot-axis', default='y', show_default=True,
+@click.option('--rotate', default=None, type=str, metavar='<s>',
+              help='list of ordered rotation commands to apply\n\n'
+                   '- "90-x-60-z" => rot 90deg about x THEN 60deg about z\n\n'
+                   '- Always occurs AFTER smart_rotate')
+@click.option('--rot-axis', default='y', show_default=True, metavar='<s>',
               help='gif rotation axis:'
                    ' x (left-to-right), y (bot-to-top), or z (ccw);'
                    ' can also add a "-" to change direction!')
-@click.option('--anchor', default=None,
+@click.option('--anchor', default=None, metavar='<i|s>',
               help='define atom to anchor to center such'
                    'that all other atoms rotate around it\n\n'
                    '- index: index of atom to anchor\n\n'
                    '- "center": closest to center of position is anchored\n\n'
                    '- chem-symbol: first atom type found with that symbol'
                    ' (based on index order) is anchored')
-@click.option('--max-px', default=600, show_default=True,
+@click.option('--max-px', default=600, show_default=True, metavar='<i>',
               help='sets pixel count for longest dimension in visual')
 @click.option('--square', is_flag=True,
               help='ensure visual has 1:1 aspect ratio')
 @click.option('--legend', 'draw_legend', is_flag=True,
               help='adds an atom type legend to visual')
-@click.option('--leg-order', default='size', show_default=True,
+@click.option('--leg-order', default='size', show_default=True, metavar='<s>',
               help='Used to order the legend: size, size_r, alpha, number')
-@click.option('--legend-max-ms', default=20, show_default=True,
+@click.option('--legend-max-ms', default=20, show_default=True, metavar='<i>',
               help='scales atoms in legend')
 @click.option('-o', '--optimize', is_flag=True,
               help='(experimental) attempts to optimize file size of visual')
@@ -62,29 +67,30 @@ import matplotlib.cm as cm
               help='atoms are colored by initial_charges in ase atoms object')
 @click.option('--colorbar', 'draw_colorbar', is_flag=True,
               help='Draws a colorbar if values are used as colors')
-@click.option('--cb-min', default=None, type=float,
+@click.option('--cb-min', default=None, type=float, metavar='<f>',
               help='define min value limit for colorbar')
-@click.option('--cb-max', default=None, type=float,
+@click.option('--cb-max', default=None, type=float, metavar='<f>',
               help='define max value limit for colorbar')
-@click.option('--cmap', default='bwr_r', show_default=True,
+@click.option('--cmap', default='bwr_r', show_default=True, metavar='<s>',
               help='matplotlib cmap to be used if values are used for colors')
 @click.option('--center-data', is_flag=True,
               help='colors are centered about middle of cmap when using values'
                    ' as colors')
-@click.option('--labels', default=None, type=str,
-              help='define labels to add to atoms'
-                   ' - "symbols", "symbols-noh", "values" (from colors option),'
-                   ' or "charges" (see --use-charges)'
-                   '[Default: No labels]')
-@click.option('--label-size', default=None, help='set size of labels')
+@click.option('--labels', default=None, type=str, metavar='<s>',
+              help='define labels to add to atoms\n\n'
+                   '- "symbols", "symbols-noh", "values" (from colors option),'
+                   ' or "charges" (see --use-charges)\n\n'
+                   '[default: No labels]')
+@click.option('--label-size', default=None, type=int, metavar='<i>',
+              help='set size of labels')
 @click.option('--bond-color', default='white', show_default=True,
-              help='define color of bonds')
+              metavar='<s>', help='define color of bonds')
 @click.option('--bond-edgecolor', default='black', show_default=True,
-              help='define color of bond edges (outline)')
+              metavar='<s>', help='define color of bond edges (outline)')
 @click.option('--save-frames', is_flag=True,
               help='folder is made and gif frames saved as pngs')
 def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
-        scale, no_bonds, rot_axis, anchor, max_px, square, draw_legend,
+        scale, no_bonds, rotate, rot_axis, anchor, max_px, square, draw_legend,
         leg_order, legend_max_ms, optimize, transparent, overwrite,
         use_charges, draw_colorbar, cb_min, cb_max, cmap, center_data,
         labels, label_size, bond_color, bond_edgecolor, save_frames):
@@ -108,6 +114,18 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
         else:
             colors = c
 
+    # make sure rotate option is valid
+    if rotate is not None:
+        # rotate param must be in the form <int>-<xyz>-<int>-<xyz>-...
+        # convert to list and check rotate form
+        rotate = rotate.split('-')
+        if (len(rotate)%2 == 1 or
+           any(not i.isdigit() for i in rotate[::2]) or
+           any(j.lower() not in 'xyz' for j in rotate[1::2])):
+            # if invalid, ignore rotate param and continue
+            print('invalid rotate argument. ignoring rotation commands.')
+            rotate = None
+
     # if cmap str is given, ensure that it exists as a cmap
     # if not, default to bwr_r cmap (used when cmap = None)
     if cmap is not None:
@@ -126,6 +144,7 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
             fps=fps,
             scale=scale,
             draw_bonds=not no_bonds,
+            custom_rotate=rotate,
             rot_axis=rot_axis,
             anchor=anchor,
             max_px=max_px,
