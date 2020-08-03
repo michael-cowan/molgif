@@ -18,7 +18,7 @@ import matplotlib.cm as cm
               help='opens visual of molecule - does not save new files')
 @click.option('-r', '--smart-rotate', is_flag=True,
               help='orients atoms such that max variance is in x-axis')
-@click.option('-c', '--colors', default=None, type=str, metavar='<s>',
+@click.option('-c', '--colors', '--color', default=None, type=str, metavar='<s>',
               help='specify atom colors or colors of specific atom types\n\n'
                    '-c blue = all atoms are blue\n\n'
                    '-c C-blue-H-green = C are blue, H are green\n\n'
@@ -35,7 +35,7 @@ import matplotlib.cm as cm
 @click.option('--hide', default=None, metavar='<i|s>-*',
               help='select atom types and/or atom indices to hide\n\n'
                    '--hide Cd-10-11 -> hides all Cd atoms and atoms 10 and 11')
-@click.option('--alphas', default=None, metavar='<i|s>-<f>-*',
+@click.option('--alphas', '--alpha', default=None, metavar='<i|s>-<f>-*',
               help='set transparency of atom types or atom indices\n\n'
                    '--alphas Cd-0.1 -> all Cd atoms are almost see through')
 @click.option('--rotate', default=None, type=str, metavar='<i>-<s>-*',
@@ -122,11 +122,15 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
             colors = c
 
     # check alpha values
-    if alphas is not None and '-' in alphas:
-        alphas = alphas.split('-')
-        if len(alphas) % 2:
-            print('Invalid alpha values given')
-        alphas = {i: float(j) for i, j in zip(alphas[::2], alphas[1::2])}
+    if alphas is not None:
+        if '-' in alphas:
+            alphas = alphas.split('-')
+            if len(alphas) % 2:
+                print('Invalid alpha values given')
+            alphas = {i if not i.isdigit() else int(i): float(j)
+                      for i, j in zip(alphas[::2], alphas[1::2])}
+        elif alphas.replace('.', '', 1).isdigit():
+            alphas = float(alphas)
 
     # make sure rotate option is valid
     if rotate is not None:
