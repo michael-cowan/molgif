@@ -35,7 +35,7 @@ if platform.system().lower().startswith('windows'):
 class Molecule(object):
     def __init__(self, atoms, scale=0.7, name=None, square=False,
                  colors=None, labels=None, rot_axis=None,
-                 bond_color='white', bond_edgecolor='black',
+                 alphas=None, bond_color='white', bond_edgecolor='black',
                  cb_min=None, cb_max=None, center_data=False, cmap=cm.bwr_r,
                  draw=['atoms', 'bonds']):
         """
@@ -79,6 +79,10 @@ class Molecule(object):
                           - can also add a '-' to change direction!
                             e.g. '-z' causes clockwise rotation
                           (Default: 'y')
+
+        - alphas (int iterable dict): set transparency of atom type
+                                      or atom indices
+                                      (Default: None)
 
         - bond_color (str): specify color of bonds
                             (Default: white)
@@ -201,8 +205,14 @@ class Molecule(object):
         self.legend = None
         self.leg_order = 'size'
 
+        # alpha value of atoms
+        self._alphas = [1.] * len(self.atoms)
+
+        if alphas is not None:
+            self.alphas = alphas
+
         # color attributes
-        self._colors = None
+        self._colors = [jmol_colors[a.number] for a in self.atoms]
 
         # track if colors have changed
         self._prevcolors = None
@@ -225,6 +235,27 @@ class Molecule(object):
 
     def __getitem__(self, i):
         return self.atoms[i]
+
+    @property
+    def alphas(self):
+        return self._alphas
+
+    @alphas.setter
+    def alphas(self, value):
+        changed = True
+        if isinstance(value, dict):
+            self._alphas = self._dict_to_list(value, self._alphas)[0]
+        elif ((isinstance(value, list) or isinstance(value, np.ndarray)) and
+              len(value) == len(self)):
+            self._alphas = list(value)
+        elif isinstance(value, int) or isinstance(value, float):
+            self._alphas = [value] * len(self)
+        else:
+            changed = False
+        if changed and self.fig is not None:
+            self.draw_atoms(force=True)
+            if 'bonds' in self.drawn:
+                self.draw_bonds()
 
     # colors getter
     @property
@@ -481,6 +512,7 @@ class Molecule(object):
                             (a.x, a.y),
                             radius=self.radii[i],
                             facecolor=self._colors[i],
+                            alpha=self._alphas[i],
                             edgecolor='k',
                             linewidth=self.scaled_borderwidth,
                             zorder=a.z)
@@ -573,14 +605,19 @@ class Molecule(object):
             # use avg z for zorder
             zorder = (xy1[2] + xy2[2]) / 2
 
+            # set alpha value of bond to lowest alpha atom
+            alpha = min(self.alphas[b[0]], self.alphas[b[1]])
+
             if update:
                 # update bond outline
                 self.bond_objs[2 * i].set_data((x, y))
                 self.bond_objs[2 * i].set_zorder(zorder - 0.001)
+                self.bond_objs[2 * i].set_alpha(alpha)
 
                 # update bond
                 self.bond_objs[2 * i + 1].set_data((x, y))
                 self.bond_objs[2 * i + 1].set_zorder(zorder)
+                self.bond_objs[2 * i + 1].set_alpha(alpha)
             else:
                 # draw thinner white line over black line
                 # to create bordered bonds
@@ -590,6 +627,7 @@ class Molecule(object):
                         zorder=zorder - 0.001,
                         color=self.bond_edgecolor,
                         lw=self.scaled_bond_width,
+                        alpha=alpha,
                         solid_capstyle='round')
 
                 # draw bond fill
@@ -598,6 +636,7 @@ class Molecule(object):
                         y,
                         zorder=zorder,
                         color=self.bond_color,
+                        alpha=alpha,
                         lw=self.scaled_bond_fill,
                         solid_capstyle='round')
 
@@ -1391,24 +1430,16 @@ class Molecule(object):
                 failed = False
             except ValueError:
                 pass
+        # convert dict of color specs
         elif isinstance(value, dict):
-            colors_dict = {k.title(): value[k] for k in value.copy()}
+            value, allow_legend = self._dict_to_list(value, self._colors)
+            self.block_legend = not allow_legend
 
-            # find atom types that are not in atoms object
-            not_found = [c for c in colors_dict
-                         if c.title() not in self.atoms.symbols]
-            if not_found:
-                print('%s do not match atom types.' % (', '.join(not_found)))
-
-            # use combination of color_dict and jmol_colors
-            try:
-                self._colors = [mcolors.to_rgba(colors_dict.get(i.symbol,
-                                list(jmol_colors[i.number])))
-                                for i in self.atoms]
-                failed = False
-            except ValueError:
-                pass
-
+            for i in range(len(value)):
+                if isinstance(value[i], str):
+                    value[i] = list(mcolors.to_rgba(value[i]))[:-1]
+            self._colors = value
+            failed = False
         elif type(value) in [list, np.ndarray]:
             # if values (ex charge), create Red Blue colormap
             try:
@@ -1442,7 +1473,7 @@ class Molecule(object):
                 self.block_colorbar = False
                 failed = False
             # else see if list contains strings
-            except ValueError:
+            except Exception:
                 # if length is the same, try to convert items to valid colors
                 if len(value) == len(self):
                     try:
@@ -1508,3 +1539,50 @@ class Molecule(object):
         # redraw atoms if labels have changed
         if self._labels != old_labels and 'atoms' in self._drawn:
             self.draw_atoms(force=True)
+
+    def _dict_to_list(self, prop_dict, default_ls):
+        """
+        Converts dict of custom properties into array of values for each atom
+        - works for colors, alpha values, and hiding atoms
+
+        Args:
+        prop_dict (dict): dictionary of properties for certain atoms
+                          - key = chem symbol: all atoms of that symbol
+                          - key = index: just that atom index
+        default_ls (list): default values for atoms in molecule
+
+        Returns:
+        (np.ndarray): 1D array of custom and default values, ordered by atom
+        allow_legend (bool): if True, each atom type has a consistent color
+        """
+        val_ls = copy.deepcopy(default_ls)
+
+        # track or properties are consistant for each atom type
+        allow_legend = True
+
+        # track values for each atom type if consistent
+        const_val_dict = {}
+
+        arr = np.array(val_ls)
+        # see if items are iterable (i.e. arr is larger than 1D)
+        nd = len(arr.shape) > 1
+
+        for s in set(self.atoms.symbols):
+            uniq = np.unique(arr[self.atoms.symbols == s], axis=0)
+            if len(uniq) > 1:
+                allow_legend = False
+                break
+            const_val_dict[s] = uniq.tolist()[0]
+
+        # iterate over symbols first, then atom indices
+        for k in sorted(prop_dict, key=lambda i: [not isinstance(i, str), i]):
+            if isinstance(k, str) and k.title() in chemical_symbols:
+                for i in np.where(self.atoms.symbols == k.title())[0]:
+                    val_ls[i] = prop_dict[k]
+            elif ((isinstance(k, int) or str(k).isdigit()) and
+                  (-1 < int(k) < len(val_ls))):
+                val_ls[int(k)] = prop_dict[k]
+                if prop_dict[k] != const_val_dict[self.atoms.symbols[int(k)]]:
+                    allow_legend = False
+
+        return val_ls, allow_legend

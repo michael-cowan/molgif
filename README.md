@@ -170,6 +170,34 @@ Default colors will be used for types not specified
 
 ![c4h4o-3](gifs/C4H4O-3.gif)
 
+### Hide atoms and set alpha values
+
+Hide based on atom type or index
+Alpha (transparency) values: 0 = invisible, 1 = opaque
+
+- **Functional**
+
+    ```python
+    molgif.rot_gif(c4h4o, hide=['O'], alphas={'H': 0.4})
+    ```
+
+- **Object-oriented**
+
+    ```python
+    rem_h = c4h4o[c4h4o.symbols != 'O']
+    mol = molgif.Molecule(rem_h)
+    mol.alphas = {'H': 0.4}
+    mol.save_rot_gif()
+    ```
+
+- **Scripting**
+
+    ```console
+    root@host:~$ molgif c4h4o.xyz --hide O --alphas H-0.4
+    ```
+
+![c4H4](gifs/C4H4.gif)
+
 ### Anchor an atom to be at the center of rotation
 
 Can define:
@@ -205,7 +233,7 @@ colors[anchor] = '#0892d0'
 - **Scripting**
 
     ```console
-    root@host:~$ molgif c4h4o.xyz --anchor 3 --colors w-w-w-#0892d0-w-w-w-w-w
+    root@host:~$ molgif c4h4o.xyz --anchor 3 --colors 3-#0892d0
     ```
 
 ![c4h4o-4](gifs/C4H4O-4.gif)

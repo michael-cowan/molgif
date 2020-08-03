@@ -61,6 +61,15 @@ molgif.rot_gif(atoms, max_px=max_px, draw_legend=True,
                colors=colors)
 
 """
+Hide atom types and set alpha values
+"""
+
+# hide given as list
+# alphas given as float, list, or dict
+molgif.rot_gif(atoms, max_px=max_px, hide=['O'],
+               alphas={'H': 0.4})
+
+"""
 Anchor an atom to be at the center of rotation
 """
 

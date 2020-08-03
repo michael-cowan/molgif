@@ -6,6 +6,7 @@ import sys
 import re
 import subprocess
 import platform
+import numpy as np
 import ase.io
 import matplotlib
 import matplotlib.cm as cm
@@ -25,13 +26,13 @@ if platform.system().lower().startswith('windows'):
 
 def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
             colors=None, loop_time=6, fps=20, scale=0.7, draw_bonds=True,
-            custom_rotate=None, rot_axis='y', anchor=None, max_px=600,
-            square=False, draw_legend=False, leg_order='size',
-            legend_max_ms=20, optimize=False, transparent=False,
-            overwrite=False, use_charges=False, draw_colorbar=False,
-            cb_min=None, cb_max=None, cmap=cm.bwr_r, center_data=False,
-            labels=None, label_size=None, bond_color='white',
-            bond_edgecolor='black', save_frames=False):
+            hide=None, alphas=None, custom_rotate=None, rot_axis='y',
+            anchor=None, max_px=600, square=False, draw_legend=False,
+            leg_order='size', legend_max_ms=20, optimize=False,
+            transparent=False, overwrite=False, use_charges=False,
+            draw_colorbar=False, cb_min=None, cb_max=None, cmap=cm.bwr_r,
+            center_data=False, labels=None, label_size=None,
+            bond_color='white', bond_edgecolor='black', save_frames=False):
     """
     Creates a rotating animation .gif of a molecule from
     an ase.Atoms object or a geometry file
@@ -69,6 +70,11 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
                      (Default: 0.7)
     - draw_bonds (bool): if True, bonds are drawn
                         (Default: True)
+    - hide (list): select atom types and/or atom indices to hide
+                   - hide occurs before smart_rotate is applied
+                   (Default: None)
+    - alphas (int iterable dict): set transparency of atom type or atom indices
+                                  (Default: None)
     - custom_rotate (list): list of ordered rotation commands to apply
                             - [angle, (x|y|z), angle, (x|y|z), ...]
                             - Always occurs AFTER smart_rotate
@@ -148,6 +154,18 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
     atoms = utils.path2atoms(atoms)
     atoms = atoms.copy()
 
+    # hide atoms if given
+    if hide is not None:
+        toremove = []
+        for h in hide:
+            if isinstance(h, int) or h.isdigit():
+                toremove.append(int(h))
+            elif isinstance(h, str) and len(h) <= 2:
+                toremove += [i for i
+                             in np.where(atoms.symbols == h.title())[0]]
+        for r in sorted(toremove, reverse=True):
+            atoms.pop(r)
+
     # color atoms based on charge (also centers color scheme around 0)
     if use_charges:
         colors = atoms.get_initial_charges().copy()
@@ -155,11 +173,11 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
         # draw_colorbar = True
 
     # build figure object
-    molecule = Molecule(atoms, scale=scale, colors=colors,
+    molecule = Molecule(atoms, scale=scale, colors=colors, alphas=alphas,
                         bond_color=bond_color, bond_edgecolor=bond_edgecolor,
-                        labels=labels, cb_min=cb_min,
-                        cb_max=cb_max, center_data=center_data,
-                        cmap=cmap, square=square, rot_axis=rot_axis, draw=[])
+                        labels=labels, cb_min=cb_min, cb_max=cb_max,
+                        center_data=center_data, cmap=cmap, square=square,
+                        rot_axis=rot_axis, draw=[])
 
     # anchor specific atom to origin (all other atoms will rotate around it)
     if anchor is not None:

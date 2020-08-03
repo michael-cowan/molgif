@@ -32,7 +32,13 @@ import matplotlib.cm as cm
               help='scales size of atoms: scale * covalent radii')
 @click.option('--no-bonds', is_flag=True,
               help='removes bond from visual')
-@click.option('--rotate', default=None, type=str, metavar='<s>',
+@click.option('--hide', default=None, metavar='<i|s>-*',
+              help='select atom types and/or atom indices to hide\n\n'
+                   '--hide Cd-10-11 -> hides all Cd atoms and atoms 10 and 11')
+@click.option('--alphas', default=None, metavar='<i|s>-<f>-*',
+              help='set transparency of atom types or atom indices\n\n'
+                   '--alphas Cd-0.1 -> all Cd atoms are almost see through')
+@click.option('--rotate', default=None, type=str, metavar='<i>-<s>-*',
               help='list of ordered rotation commands to apply\n\n'
                    '- "90-x-60-z" => rot 90deg about x THEN 60deg about z\n\n'
                    '- Always occurs AFTER smart_rotate')
@@ -90,10 +96,11 @@ import matplotlib.cm as cm
 @click.option('--save-frames', is_flag=True,
               help='folder is made and gif frames saved as pngs')
 def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
-        scale, no_bonds, rotate, rot_axis, anchor, max_px, square, draw_legend,
-        leg_order, legend_max_ms, optimize, transparent, overwrite,
-        use_charges, draw_colorbar, cb_min, cb_max, cmap, center_data,
-        labels, label_size, bond_color, bond_edgecolor, save_frames):
+        scale, no_bonds, hide, alphas, rotate, rot_axis, anchor, max_px,
+        square, draw_legend, leg_order, legend_max_ms, optimize, transparent,
+        overwrite, use_charges, draw_colorbar, cb_min, cb_max, cmap,
+        center_data, labels, label_size, bond_color, bond_edgecolor,
+        save_frames):
     """
     molgif: create smooth gifs of rotating molecules
 
@@ -106,25 +113,36 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
     if colors is not None and '-' in colors:
         c = colors.split('-')
 
-        # if chemical symbols given, assume dictionary
-        if all(s in chemical_symbols for s in c[::2]):
-            colors = {k: v for k, v in zip(c[::2], c[1::2])}
-
+        # if chemical symbol or index given, assume dict
+        if any(s in chemical_symbols or s.isdigit() for s in c[::2]):
+            colors = {k if not k.isdigit() else int(k): v
+                      for k, v in zip(c[::2], c[1::2])}
         # else assume list of colors
         else:
             colors = c
+
+    # check alpha values
+    if alphas is not None and '-' in alphas:
+        alphas = alphas.split('-')
+        if len(alphas) % 2:
+            print('Invalid alpha values given')
+        alphas = {i: float(j) for i, j in zip(alphas[::2], alphas[1::2])}
 
     # make sure rotate option is valid
     if rotate is not None:
         # rotate param must be in the form <int>-<xyz>-<int>-<xyz>-...
         # convert to list and check rotate form
         rotate = rotate.split('-')
-        if (len(rotate)%2 == 1 or
+        if (len(rotate) % 2 == 1 or
            any(not i.isdigit() for i in rotate[::2]) or
            any(j.lower() not in 'xyz' for j in rotate[1::2])):
             # if invalid, ignore rotate param and continue
             print('invalid rotate argument. ignoring rotation commands.')
             rotate = None
+
+    # if hide argument, ensure that format is correct
+    if hide is not None:
+        hide = hide.split('-')
 
     # if cmap str is given, ensure that it exists as a cmap
     # if not, default to bwr_r cmap (used when cmap = None)
@@ -144,6 +162,8 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
             fps=fps,
             scale=scale,
             draw_bonds=not no_bonds,
+            hide=hide,
+            alphas=alphas,
             custom_rotate=rotate,
             rot_axis=rot_axis,
             anchor=anchor,
