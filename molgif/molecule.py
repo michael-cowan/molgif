@@ -1576,8 +1576,15 @@ class Molecule(object):
 
         # iterate over symbols first, then atom indices
         for k in sorted(prop_dict, key=lambda i: [not isinstance(i, str), i]):
-            if isinstance(k, str) and k.title() in chemical_symbols:
-                for i in np.where(self.atoms.symbols == k.title())[0]:
+            # if chemical symbol or R (equivalent to C and H)
+            if isinstance(k, str) and (k.title() in chemical_symbols or
+               k.upper() == 'R'):
+                # find C and H atoms
+                if k.upper() == 'R':
+                    inds = np.where(np.isin(self.atoms.symbols, ['C', 'H']))[0]
+                else:
+                    inds = np.where(self.atoms.symbols == k.title())[0]
+                for i in inds:
                     val_ls[i] = prop_dict[k]
             elif ((isinstance(k, int) or str(k).isdigit()) and
                   (-1 < int(k) < len(val_ls))):

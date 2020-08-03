@@ -113,8 +113,9 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
     if colors is not None and '-' in colors:
         c = colors.split('-')
 
-        # if chemical symbol or index given, assume dict
-        if any(s in chemical_symbols or s.isdigit() for s in c[::2]):
+        # if chemical symbol, R, or index given, assume dict
+        if any(s in chemical_symbols or s.isdigit() or s.upper() == 'R'
+               for s in c[::2]):
             colors = {k if not k.isdigit() else int(k): v
                       for k, v in zip(c[::2], c[1::2])}
         # else assume list of colors

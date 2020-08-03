@@ -8,6 +8,7 @@ import subprocess
 import platform
 import numpy as np
 import ase.io
+from ase.data import chemical_symbols
 import matplotlib
 import matplotlib.cm as cm
 import matplotlib.animation as anim
@@ -160,9 +161,14 @@ def rot_gif(atoms, save_path=None, img=False, vis=False, smart_rotate=False,
         for h in hide:
             if isinstance(h, int) or h.isdigit():
                 toremove.append(int(h))
-            elif isinstance(h, str) and len(h) <= 2:
+            elif str(h).title() in chemical_symbols:
                 toremove += [i for i
                              in np.where(atoms.symbols == h.title())[0]]
+            # can hide R group (C and H atoms)
+            elif str(h).upper() == 'R':
+                toremove += [i for i
+                             in np.where(np.isin(atoms.symbols,
+                                                 ['C', 'H']))[0]]
         for r in sorted(toremove, reverse=True):
             atoms.pop(r)
 
