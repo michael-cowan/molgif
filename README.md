@@ -174,6 +174,7 @@ Default colors will be used for types not specified
 
 Hide based on atom type or index
 Alpha (transparency) values: 0 = invisible, 1 = opaque
+Bonds: alpha value set to minimum alpha between atoms
 
 - **Functional**
 
