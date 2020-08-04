@@ -1543,7 +1543,7 @@ class Molecule(object):
     def _dict_to_list(self, prop_dict, default_ls):
         """
         Converts dict of custom properties into array of values for each atom
-        - works for colors, alpha values, and hiding atoms
+        - works for colors and alpha values
 
         Args:
         prop_dict (dict): dictionary of properties for certain atoms
@@ -1553,7 +1553,7 @@ class Molecule(object):
 
         Returns:
         (np.ndarray): 1D array of custom and default values, ordered by atom
-        allow_legend (bool): if True, each atom type has a consistent color
+        allow_legend (bool): if True, each atom type has a consistent value
         """
         val_ls = copy.deepcopy(default_ls)
 

@@ -38,6 +38,8 @@ import matplotlib.cm as cm
 @click.option('--alphas', '--alpha', default=None, metavar='<i|s>-<f>-*',
               help='set transparency of atom types or atom indices\n\n'
                    '--alphas Cd-0.1 -> all Cd atoms are almost see through')
+@click.option('--fade', default=None, metavar='<i|s>-*',
+              help='fades selected atoms (sets alpha = 0.2 and color = white')
 @click.option('--rotate', default=None, type=str, metavar='<i>-<s>-*',
               help='list of ordered rotation commands to apply\n\n'
                    '- "90-x-60-z" => rot 90deg about x THEN 60deg about z\n\n'
@@ -96,7 +98,7 @@ import matplotlib.cm as cm
 @click.option('--save-frames', is_flag=True,
               help='folder is made and gif frames saved as pngs')
 def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
-        scale, no_bonds, hide, alphas, rotate, rot_axis, anchor, max_px,
+        scale, no_bonds, hide, alphas, fade, rotate, rot_axis, anchor, max_px,
         square, draw_legend, leg_order, legend_max_ms, optimize, transparent,
         overwrite, use_charges, draw_colorbar, cb_min, cb_max, cmap,
         center_data, labels, label_size, bond_color, bond_edgecolor,
@@ -109,12 +111,32 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
 
     ATOMS: atoms to be visualized - path to geometry file
     """
+    # fade specific atoms (by atom type or indices)
+    # sets alpha to 0.2 and color to white
+    # does not change alpha or color if user sets it themselves
+    if fade is not None:
+        fade_ls = fade.lower().split('-')
+        # convert R group to C and H atoms
+        if 'r' in fade_ls:
+            fade_ls.remove('r')
+            fade_ls += ['c', 'h']
+
+        for f in fade_ls:
+            if colors is None:
+                colors = f'{f}-white'
+            elif f not in colors.lower().split('-'):
+                colors += f'-{f}-white'
+            if alphas is None:
+                alphas = f'{f}-0.2'
+            elif f not in alphas.lower().split('-'):
+                alphas += f'-{f}-0.2'
+
     # if - is used, convert atom type colors to dict
     if colors is not None and '-' in colors:
         c = colors.split('-')
 
         # if chemical symbol, R, or index given, assume dict
-        if any(s in chemical_symbols or s.isdigit() or s.upper() == 'R'
+        if any(s.title() in chemical_symbols or s.isdigit() or s.upper() == 'R'
                for s in c[::2]):
             colors = {k if not k.isdigit() else int(k): v
                       for k, v in zip(c[::2], c[1::2])}
