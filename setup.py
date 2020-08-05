@@ -24,4 +24,4 @@ setuptools.setup(name='molgif',
                                    'numpy>=1.17.2',
                                    'pillow',
                                    'ase>=3.17.0',
-                                   'click'])
+                                   'click>=7'])
