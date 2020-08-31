@@ -1,0 +1,5 @@
+ase >= 3.17.0
+matplotlib >= 3
+numpy >= 1.17.2
+pillow >= 5
+click >= 7
