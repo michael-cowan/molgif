@@ -24,7 +24,7 @@ root@host:~$ pip install molgif
     molgif.Molecule
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif --help
@@ -59,7 +59,7 @@ c4h4o.rotate(60, 'z')
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz
@@ -87,7 +87,7 @@ c4h4o.rotate(60, 'z')
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --smart-rotate --legend
@@ -124,7 +124,7 @@ colors = rainbow
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     Specify single color
 
@@ -160,7 +160,7 @@ Default colors will be used for types not specified
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     Color dict can be defined as *(symbol-color)-* pairs
 
@@ -191,7 +191,7 @@ Bonds: alpha value set to minimum alpha between atoms
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --hide O --alphas H-0.4
@@ -231,7 +231,7 @@ colors[anchor] = '#0892d0'
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --anchor 3 --colors 3-#0892d0
@@ -256,7 +256,7 @@ loop_time = time to complete one rotation (seconds)
     mol.save_rot_gif(loop_time=2, fps=60)
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --loop-time 2 --fps 60
@@ -282,7 +282,7 @@ loop_time = time to complete one rotation (seconds)
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --no-bonds --scale 0.9
@@ -312,7 +312,7 @@ Examples changing to 'x':
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --rot-axis x
@@ -338,7 +338,7 @@ negative rot_axis (e.g. "-x") reverses direction
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     ```console
     root@host:~$ molgif c4h4o.xyz --rot-axis -x
@@ -383,7 +383,7 @@ atoms.write('c4h4o.xyz')
     mol.save_rot_gif()
     ```
 
-- **Scripting**
+- **Command Line**
 
     Assumes that initial_charges are defined in xyz file (using ase)
 
