@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import ase.neighborlist
+from ase.data import covalent_radii
 
 
 def angstrom_to_axunits(val, ax):
@@ -78,7 +79,7 @@ def avoid_overwrite_dir(dirpath):
         return dirpath
 
 
-def get_bonds(atoms, radii, scale=1.25):
+def get_bonds(atoms, radii=None, scale=1.25):
     """
     Finds bonds between atoms based on bonding radii
 
@@ -94,6 +95,14 @@ def get_bonds(atoms, radii, scale=1.25):
     # remove periodic boundaries
     atoms = atoms.copy()
     atoms.pbc = False
+
+    # use covalent radii of atoms as default
+    if radii is None:
+        radii = covalent_radii[atoms.numbers]
+
+    # else ensure that radii is a np array
+    elif not isinstance(radii, np.ndarray):
+        radii = np.array(radii)
 
     # create neighborlist object
     n = ase.neighborlist.NeighborList(radii * scale, skin=0,
