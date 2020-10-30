@@ -33,7 +33,6 @@ def test_get_bonds__finds_all_methane_bonds():
 
 def test_get_bonds__0scale_return_empty_list():
     methane = molecule('CH4')
-    bonds = utils.get_bonds(methane)
     assert utils.get_bonds(methane, [0] * 5) == []
 
 
