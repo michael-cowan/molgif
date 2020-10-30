@@ -4,6 +4,8 @@ from molgif._version import __version__
 from ase.data import chemical_symbols
 import matplotlib.cm as cm
 
+# default alpha value to use with fade option
+FADE_ALPHA = 0.2
 
 @click.command(name='molgif',
                context_settings=dict(help_option_names=['-h', '--help']))
@@ -39,7 +41,7 @@ import matplotlib.cm as cm
               help='set transparency of atom types or atom indices\n\n'
                    '--alphas Cd-0.1 -> all Cd atoms are almost see through')
 @click.option('--fade', default=None, metavar='<i|s>-*',
-              help='fades selected atoms (sets alpha = 0.2 and color = white')
+              help=f'fades selected atoms (sets alpha = {FADE_ALPHA} and color = white')
 @click.option('--rotate', default=None, type=str, metavar='<i>-<s>-*',
               help='list of ordered rotation commands to apply\n\n'
                    '- "90-x-60-z" => rot 90deg about x THEN 60deg about z\n\n'
@@ -127,9 +129,9 @@ def cli(atoms, save_path, img, vis, smart_rotate, colors, loop_time, fps,
             elif f not in colors.lower().split('-'):
                 colors += f'-{f}-white'
             if alphas is None:
-                alphas = f'{f}-0.2'
+                alphas = f'{f}-{FADE_ALPHA}'
             elif f not in alphas.lower().split('-'):
-                alphas += f'-{f}-0.2'
+                alphas += f'-{f}-{FADE_ALPHA}'
 
     # if - is used, convert atom type colors to dict
     if colors is not None and '-' in colors:
