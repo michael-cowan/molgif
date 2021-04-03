@@ -1,3 +1,5 @@
+![molgif](gifs/molgif_logo.gif)
+
 # molgif
 
 create smooth gifs of rotating molecules
